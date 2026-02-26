@@ -51,6 +51,8 @@ coverage/
 .env
 .env.*
 !.env.example
+secrets.json
+appsettings.*.Local.json
 
 # --- Docker / tooling ---
 docker-compose.override.yml
