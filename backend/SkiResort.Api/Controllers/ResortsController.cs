@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SkiResort.Api.Models;
 using SkiResort.Infrastructure.Data;
+using SkiResort.Domain.Entities;
 
 namespace SkiResort.Api.Controllers;
 
@@ -112,7 +113,7 @@ public class ResortsController : ControllerBase
                 l.UpdatedAt))
             .ToList();
 
-        var runQuery = _dbContext.RunStatuses
+        IQueryable<RunStatus> runQuery = _dbContext.RunStatuses
             .AsNoTracking()
             .Where(r => r.ResortId == id)
             .OrderByDescending(r => r.UpdatedAt)
@@ -127,7 +128,7 @@ public class ResortsController : ControllerBase
 
                 runQuery = runQuery.Where(r =>
                     r.UpdatedAt < updatedAt ||
-                    (r.UpdatedAt == updatedAt && string.CompareOrdinal(r.Id.ToString(), lastId.ToString(), StringComparison.Ordinal) < 0));
+                    (r.UpdatedAt == updatedAt && string.CompareOrdinal(r.Id.ToString(), lastId.ToString()) < 0));
             }
             else
             {

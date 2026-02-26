@@ -1,3 +1,4 @@
+using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.Extensions.NETCore.Setup;
 using Amazon.SQS;
@@ -11,6 +12,11 @@ using SkiResort.Infrastructure.Favorites;
 using SkiResort.Infrastructure.Reports;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure AWS SDK default options (region, credentials, etc.)
+var awsOptions = builder.Configuration.GetAWSOptions();
+awsOptions.Region ??= RegionEndpoint.USEast1;
+builder.Services.AddDefaultAWSOptions(awsOptions);
 
 // Criterion 5: Configure EF Core with PostgreSQL for RDS
 builder.Services.AddDbContext<SkiResortDbContext>(options =>
