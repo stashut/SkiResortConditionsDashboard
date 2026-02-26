@@ -10,5 +10,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.3" />
+    <PackageReference Include="AWSSDK.SQS" Version="3.7.400.140" />
+    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.0" />
   </ItemGroup>
 </Project>
