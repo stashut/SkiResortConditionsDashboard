@@ -1,0 +1,57 @@
+# --- General ---
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+
+# --- Visual Studio / .NET ---
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+bin/
+obj/
+out/
+TestResults/
+.vscode/
+
+# ASP.NET publish artifacts
+*.pubxml
+*.pubxml.user
+
+# NuGet
+*.nupkg
+packages/
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Resharper / Rider
+_ReSharper*/
+*.DotSettings.user
+.idea/
+
+# --- Node / Angular (frontend) ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+
+dist/
+dist-ssr/
+coverage/
+.angular/
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Docker / tooling ---
+docker-compose.override.yml
+
