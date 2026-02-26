@@ -8,4 +8,7 @@
     <ProjectReference Include="..\SkiResort.Domain\SkiResort.Domain.csproj" />
     <ProjectReference Include="..\SkiResort.Infrastructure\SkiResort.Infrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.3" />
+  </ItemGroup>
 </Project>
