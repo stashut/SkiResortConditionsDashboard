@@ -1,0 +1,31 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16
+    container_name: ski-resort-postgres
+    environment:
+      POSTGRES_USER: ski
+      POSTGRES_PASSWORD: ski_dev
+      POSTGRES_DB: ski_resort
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./backend/SkiResort.Api
+      dockerfile: Dockerfile
+    container_name: ski-resort-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__Postgres: "Host=db;Port=5432;Database=ski_resort;Username=ski;Password=ski_dev"
+    depends_on:
+      - db
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
+
