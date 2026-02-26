@@ -53,6 +53,7 @@ public class ResortsController : ControllerBase
     public async Task<ActionResult<ResortConditionsResponse>> GetResortConditions(
         Guid id,
         [FromQuery] DateTimeOffset? cursorUpdatedBefore,
+        [FromQuery] Guid? cursorIdBefore,
         [FromQuery] int pageSize = DefaultRunHistoryPageSize,
         CancellationToken cancellationToken = default)
     {
@@ -119,16 +120,34 @@ public class ResortsController : ControllerBase
 
         if (cursorUpdatedBefore.HasValue)
         {
-            runQuery = runQuery.Where(r => r.UpdatedAt < cursorUpdatedBefore.Value);
+            if (cursorIdBefore.HasValue)
+            {
+                var updatedAt = cursorUpdatedBefore.Value;
+                var lastId = cursorIdBefore.Value;
+
+                runQuery = runQuery.Where(r =>
+                    r.UpdatedAt < updatedAt ||
+                    (r.UpdatedAt == updatedAt && string.CompareOrdinal(r.Id.ToString(), lastId.ToString(), StringComparison.Ordinal) < 0));
+            }
+            else
+            {
+                runQuery = runQuery.Where(r => r.UpdatedAt < cursorUpdatedBefore.Value);
+            }
         }
 
         var runItems = await runQuery
             .Take(pageSize)
             .ToListAsync(cancellationToken);
 
-        var nextCursor = runItems.Count == pageSize
-            ? runItems[^1].UpdatedAt
-            : (DateTimeOffset?)null;
+        DateTimeOffset? nextUpdatedBefore = null;
+        Guid? nextIdBefore = null;
+
+        if (runItems.Count == pageSize)
+        {
+            var last = runItems[^1];
+            nextUpdatedBefore = last.UpdatedAt;
+            nextIdBefore = last.Id;
+        }
 
         var runDtos = runItems
             .Select(r => new RunStatusDto(
@@ -147,7 +166,8 @@ public class ResortsController : ControllerBase
             RunStatusPage = new RunStatusPageDto
             {
                 Items = runDtos,
-                NextUpdatedBefore = nextCursor
+                NextUpdatedBefore = nextUpdatedBefore,
+                NextIdBefore = nextIdBefore
             }
         };
 

@@ -36,6 +36,7 @@ public sealed class RunStatusPageDto
 {
     public IReadOnlyList<RunStatusDto> Items { get; init; } = Array.Empty<RunStatusDto>();
     public DateTimeOffset? NextUpdatedBefore { get; init; }
+    public Guid? NextIdBefore { get; init; }
 }
 
 public sealed class ResortConditionsResponse
