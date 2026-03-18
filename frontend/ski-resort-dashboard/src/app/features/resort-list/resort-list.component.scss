@@ -1,0 +1,56 @@
+.resort-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.resort-list__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.resort-list__subtitle {
+  margin: 0.25rem 0 0;
+  opacity: 0.75;
+}
+
+.resort-list__content {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 640px;
+}
+
+.resort-list__name {
+  font-weight: 500;
+}
+
+.resort-list__badge {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.resort-list__badge--live {
+  background: rgba(56, 189, 248, 0.15);
+  color: #22d3ee;
+}
+
+.resort-list__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem 0;
+}
+
+.resort-list__state--error {
+  color: #fecaca;
+}
+
