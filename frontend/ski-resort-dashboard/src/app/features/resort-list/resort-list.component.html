@@ -1,0 +1,94 @@
+<section class="resort-list">
+  <header class="resort-list__header">
+    <div>
+      <h1>Resorts</h1>
+      <p class="resort-list__subtitle">
+        Browse all ski resorts and jump into live conditions.
+      </p>
+    </div>
+  </header>
+
+  <div class="resort-list__content" *ngIf="!loading && !error; else state">
+    <table mat-table [dataSource]="resorts" class="mat-elevation-z2">
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Resort</th>
+        <td mat-cell *matCellDef="let resort">
+          <span class="resort-list__name">{{ resort.name }}</span>
+          <span
+            class="resort-list__badge resort-list__badge--live"
+            *ngIf="resort.hasLiveUpdate"
+          >
+            Live update
+          </span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="region">
+        <th mat-header-cell *matHeaderCellDef>Region</th>
+        <td mat-cell *matCellDef="let resort">
+          {{ resort.region }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="runs">
+        <th mat-header-cell *matHeaderCellDef>Runs</th>
+        <td mat-cell *matCellDef="let resort">
+          <span *ngIf="resort.runsTotal != null">
+            {{ resort.runsOpen ?? '?' }}/{{ resort.runsTotal }}
+          </span>
+          <span *ngIf="resort.runsTotal == null">–</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="lifts">
+        <th mat-header-cell *matHeaderCellDef>Lifts</th>
+        <td mat-cell *matCellDef="let resort">
+          <span *ngIf="resort.liftsTotal != null">
+            {{ resort.liftsOpen ?? '?' }}/{{ resort.liftsTotal }}
+          </span>
+          <span *ngIf="resort.liftsTotal == null">–</span>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="favorite">
+        <th mat-header-cell *matHeaderCellDef>Favorite</th>
+        <td mat-cell *matCellDef="let resort">
+          <button
+            mat-icon-button
+            color="primary"
+            (click)="toggleFavorite(resort)"
+            [matTooltip]="resort.isFavorite ? 'Remove favorite' : 'Add favorite'"
+          >
+            <mat-icon>
+              {{ resort.isFavorite ? 'favorite' : 'favorite_border' }}
+            </mat-icon>
+          </button>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let resort">
+          <button mat-stroked-button color="accent" (click)="navigateTo(resort)">
+            View details
+          </button>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+    </table>
+  </div>
+
+  <ng-template #state>
+    <div class="resort-list__state" *ngIf="loading">
+      <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+      <p>Loading resorts…</p>
+    </div>
+
+    <div class="resort-list__state resort-list__state--error" *ngIf="!loading && error">
+      <p>{{ error }}</p>
+    </div>
+  </ng-template>
+</section>
+
