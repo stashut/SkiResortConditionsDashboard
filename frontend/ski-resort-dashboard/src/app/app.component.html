@@ -7,7 +7,11 @@
 <!-- * * * * * * * to get started with your project! * * * * * * * -->
 <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
 
+<ng-container *ngIf="false">
 <style>
+  main.main {
+    display: none;
+  }
   :host {
     --bright-blue: oklch(51.01% 0.274 263.83);
     --electric-violet: oklch(53.18% 0.28 296.97);
@@ -175,6 +179,9 @@
       margin-block: 1.5rem;
     }
   }
+  main.main {
+    display: none;
+  }
 </style>
 
 <main class="main">
@@ -333,4 +340,59 @@
 <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
 
 
-<router-outlet />
+</ng-container>
+
+<mat-sidenav-container class="shell">
+  <mat-sidenav #drawer mode="side" class="shell-sidenav" fixedInViewport>
+    <mat-toolbar
+      color="primary"
+      class="shell-toolbar shell-toolbar--side"
+    >
+      <span class="logo">SkiDash</span>
+    </mat-toolbar>
+
+    <mat-nav-list>
+      <a
+        mat-list-item
+        *ngFor="let link of navLinks"
+        [routerLink]="link.path"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        (click)="drawer.close()"
+      >
+        <mat-icon matListItemIcon>{{ link.icon }}</mat-icon>
+        <span matListItemTitle>{{ link.label }}</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="shell-content">
+    <mat-toolbar
+      color="primary"
+      class="shell-toolbar shell-toolbar--top"
+    >
+      <button
+        mat-icon-button
+        (click)="drawer.toggle()"
+        class="shell-menu-button"
+      >
+        <mat-icon>menu</mat-icon>
+      </button>
+      <a class="shell-title shell-title--link" [routerLink]="['/resorts']">
+        {{ title }}
+      </a>
+      <span class="shell-spacer"></span>
+      <button
+        mat-icon-button
+        [routerLink]="'/settings'"
+        aria-label="Settings"
+      >
+        <mat-icon>settings</mat-icon>
+      </button>
+    </mat-toolbar>
+
+    <main class="shell-main">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

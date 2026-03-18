@@ -65,7 +65,8 @@
               "buildTarget": "ski-resort-dashboard:build:production"
             },
             "development": {
-              "buildTarget": "ski-resort-dashboard:build:development"
+              "buildTarget": "ski-resort-dashboard:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"
