@@ -1,0 +1,64 @@
+<section class="favorites">
+  <header class="favorites__header">
+    <div>
+      <h1>Favorites</h1>
+      <p class="favorites__subtitle">
+        Your personal list of must-ride resorts.
+      </p>
+    </div>
+  </header>
+
+  <div *ngIf="!loading && !error; else state">
+    <mat-card *ngIf="favorites.length; else none">
+      <mat-card-content>
+        <mat-nav-list>
+          <a
+            mat-list-item
+            *ngFor="let resort of favorites"
+            [routerLink]="['/resorts', resort.id]"
+          >
+            <span matListItemTitle>
+              {{ resort.name }}
+              <span
+                *ngIf="resort.hasLiveUpdate"
+                class="favorites__badge favorites__badge--live"
+              >
+                Live
+              </span>
+            </span>
+            <span matListItemLine>{{ resort.region }}</span>
+            <button
+              mat-icon-button
+              matListItemMeta
+              color="warn"
+              (click)="$event.preventDefault(); $event.stopPropagation(); removeFavorite(resort)"
+              aria-label="Remove favorite"
+            >
+              <mat-icon>delete</mat-icon>
+            </button>
+          </a>
+        </mat-nav-list>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <ng-template #none>
+    <p class="favorites__empty">
+      You do not have any favorites yet. Browse the
+      <a routerLink="/resorts">resort list</a>
+      to add some.
+    </p>
+  </ng-template>
+
+  <ng-template #state>
+    <div class="favorites__state" *ngIf="loading">
+      <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+      <p>Loading favorites…</p>
+    </div>
+
+    <div class="favorites__state favorites__state--error" *ngIf="!loading && error">
+      <p>{{ error }}</p>
+    </div>
+  </ng-template>
+</section>
+

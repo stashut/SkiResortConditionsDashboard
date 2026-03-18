@@ -1,0 +1,92 @@
+<section class="comparison">
+  <header class="comparison__header">
+    <div>
+      <h1>Snow comparison</h1>
+      <p class="comparison__subtitle">
+        Compare base depth and fresh snow across up to three resorts.
+      </p>
+    </div>
+  </header>
+
+  <mat-card>
+    <mat-card-content>
+      <form class="comparison__form">
+        <mat-form-field appearance="fill">
+          <mat-label>Resorts to compare</mat-label>
+          <mat-select
+            [(value)]="selectedIds"
+            multiple
+            [disabled]="loadingResorts"
+          >
+            <mat-option
+              *ngFor="let resort of allResorts"
+              [value]="resort.id"
+            >
+              {{ resort.name }} — {{ resort.region }}
+            </mat-option>
+          </mat-select>
+          <mat-hint>Select up to three resorts.</mat-hint>
+        </mat-form-field>
+
+        <button
+          mat-raised-button
+          color="primary"
+          type="button"
+          (click)="compare()
+          "
+          [disabled]="!canCompare() || loadingComparison"
+        >
+          Compare
+        </button>
+      </form>
+
+      <div class="comparison__state" *ngIf="loadingResorts">
+        <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
+        <p>Loading resorts…</p>
+      </div>
+
+      <p class="comparison__error" *ngIf="!loadingResorts && error">
+        {{ error }}
+      </p>
+
+      <div
+        class="comparison__table-wrapper"
+        *ngIf="!loadingResorts && !error && comparisonRows.length"
+      >
+        <table mat-table [dataSource]="comparisonRows" class="mat-elevation-z2">
+          <ng-container matColumnDef="resort">
+            <th mat-header-cell *matHeaderCellDef>Resort</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.resortName }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="baseDepth">
+            <th mat-header-cell *matHeaderCellDef>Base depth</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.baseDepthCm }} cm
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="newSnow24h">
+            <th mat-header-cell *matHeaderCellDef>New (24h)</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.newSnow24hCm }} cm
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="newSnow72h">
+            <th mat-header-cell *matHeaderCellDef>New (72h)</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.newSnow72hCm }} cm
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</section>
+
