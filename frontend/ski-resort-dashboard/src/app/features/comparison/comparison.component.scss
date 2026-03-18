@@ -1,0 +1,52 @@
+.comparison {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.comparison__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.comparison__subtitle {
+  margin: 0.25rem 0 0;
+  opacity: 0.75;
+}
+
+.comparison__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.comparison__form mat-form-field {
+  min-width: min(420px, 100%);
+}
+
+.comparison__table-wrapper {
+  overflow: auto;
+  margin-top: 1.5rem;
+}
+
+table {
+  width: 100%;
+  min-width: 540px;
+}
+
+.comparison__state {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.comparison__error {
+  margin-top: 0.5rem;
+  color: #fecaca;
+}
+
