@@ -1,0 +1,58 @@
+<section class="settings">
+  <header class="settings__header">
+    <div>
+      <h1>Settings</h1>
+      <p class="settings__subtitle">
+        Preferences are stored on the server using your session.
+      </p>
+    </div>
+  </header>
+
+  <mat-card>
+    <mat-card-content>
+      <form class="settings__form" [formGroup]="form" (ngSubmit)="save()">
+        <mat-form-field appearance="fill">
+          <mat-label>Units</mat-label>
+          <mat-select formControlName="unitPreference">
+            <mat-option value="imperial">Imperial (in / °F)</mat-option>
+            <mat-option value="metric">Metric (cm / °C)</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Region filter</mat-label>
+          <input
+            matInput
+            placeholder="e.g. Pacific Northwest"
+            formControlName="regionFilter"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Last viewed resort id</mat-label>
+          <input
+            matInput
+            type="number"
+            formControlName="lastViewedResortId"
+          />
+        </mat-form-field>
+
+        <div class="settings__actions">
+          <button
+            mat-raised-button
+            color="primary"
+            type="submit"
+            [disabled]="saving || form.invalid"
+          >
+            Save
+          </button>
+        </div>
+      </form>
+
+      <p class="settings__error" *ngIf="error">
+        {{ error }}
+      </p>
+    </mat-card-content>
+  </mat-card>
+</section>
+
