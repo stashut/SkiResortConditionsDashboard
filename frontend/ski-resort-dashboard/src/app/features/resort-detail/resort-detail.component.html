@@ -15,40 +15,23 @@
           <div>
             <div class="detail__metric-label">Base / Summit</div>
             <div class="detail__metric-value">
-              <ng-container *ngIf="r.baseElevationMeters && r.summitElevationMeters; else unknown">
-                {{ r.baseElevationMeters }}m → {{ r.summitElevationMeters }}m
+              <ng-container
+                *ngIf="r.elevationBaseMeters && r.elevationTopMeters; else unknown"
+              >
+                {{ r.elevationBaseMeters }}m → {{ r.elevationTopMeters }}m
               </ng-container>
               <ng-template #unknown>–</ng-template>
-            </div>
-          </div>
-          <div>
-            <div class="detail__metric-label">Runs open</div>
-            <div class="detail__metric-value">
-              <ng-container *ngIf="r.runsTotal != null; else runsUnknown">
-                {{ r.runsOpen ?? '?' }}/{{ r.runsTotal }}
-              </ng-container>
-              <ng-template #runsUnknown>–</ng-template>
-            </div>
-          </div>
-          <div>
-            <div class="detail__metric-label">Lifts open</div>
-            <div class="detail__metric-value">
-              <ng-container *ngIf="r.liftsTotal != null; else liftsUnknown">
-                {{ r.liftsOpen ?? '?' }}/{{ r.liftsTotal }}
-              </ng-container>
-              <ng-template #liftsUnknown>–</ng-template>
             </div>
           </div>
         </div>
       </mat-card-content>
     </mat-card>
 
-    <mat-card class="detail__card" *ngIf="latestCondition as c">
+    <mat-card class="detail__card" *ngIf="latestSnowCondition as c">
       <mat-card-header>
         <mat-card-title>Latest conditions</mat-card-title>
         <mat-card-subtitle>
-          Reported
-          {{ c.reportedAtUtc | date : 'medium' : 'UTC' }} UTC
+          Observed {{ c.observedAt | date : 'medium' : 'UTC' }} UTC
         </mat-card-subtitle>
       </mat-card-header>
 
@@ -57,58 +40,37 @@
           <div>
             <div class="detail__metric-label">Base depth</div>
             <div class="detail__metric-value">
-              {{ c.baseDepthCm }} cm
+              {{ c.snowDepthCm }} cm
             </div>
           </div>
           <div>
-            <div class="detail__metric-label">New snow (24h)</div>
+            <div class="detail__metric-label">New snow</div>
             <div class="detail__metric-value">
-              {{ c.newSnow24hCm }} cm
-            </div>
-          </div>
-          <div>
-            <div class="detail__metric-label">Temperature</div>
-            <div class="detail__metric-value">
-              <ng-container *ngIf="c.temperatureC != null; else tempUnknown">
-                {{ c.temperatureC }} °C
-              </ng-container>
-              <ng-template #tempUnknown>–</ng-template>
-            </div>
-          </div>
-          <div>
-            <div class="detail__metric-label">Wind</div>
-            <div class="detail__metric-value">
-              <ng-container *ngIf="c.windSpeedKph != null; else windUnknown">
-                {{ c.windSpeedKph }} km/h
-              </ng-container>
-              <ng-template #windUnknown>–</ng-template>
+              {{ c.newSnowCm }} cm
             </div>
           </div>
         </div>
-
-        <p class="detail__notes" *ngIf="c.notes">
-          {{ c.notes }}
-        </p>
       </mat-card-content>
     </mat-card>
 
     <mat-card class="detail__card">
       <mat-card-header>
-        <mat-card-title>Recent reports</mat-card-title>
+        <mat-card-title>Recent run status updates</mat-card-title>
       </mat-card-header>
       <mat-card-content>
-        <mat-nav-list *ngIf="recentConditions.length; else noHistory">
+        <mat-nav-list *ngIf="recentRunStatuses.length; else noHistory">
           <a
             mat-list-item
-            *ngFor="let h of recentConditions"
+            *ngFor="let h of recentRunStatuses"
             disableRipple
             class="detail__history-item"
           >
             <span matListItemTitle>
-              {{ h.reportedAtUtc | date : 'short' : 'UTC' }} UTC
+              {{ h.name }}
             </span>
             <span matListItemLine>
-              Base: {{ h.baseDepthCm }} cm • New (24h): {{ h.newSnow24hCm }} cm
+              {{ h.updatedAt | date : 'short' : 'UTC' }} UTC •
+              {{ h.isOpen ? 'Open' : 'Closed' }}
             </span>
           </a>
         </mat-nav-list>

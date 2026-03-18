@@ -16,17 +16,19 @@ export class ResortService {
     return this.http.get<Resort[]>(`${API_BASE_URL}/resorts`);
   }
 
-  getResortConditions(id: number): Observable<ResortConditionsResponse> {
+  getResortConditions(id: string): Observable<ResortConditionsResponse> {
     return this.http.get<ResortConditionsResponse>(
       `${API_BASE_URL}/resorts/${id}/conditions`
     );
   }
 
-  getSnowComparison(resortIds: number[]): Observable<SnowComparisonRow[]> {
-    const params = new HttpParams().set(
-      'resortIds',
-      resortIds.map((x) => x.toString()).join(',')
-    );
+  getSnowComparison(resortIds: string[]): Observable<SnowComparisonRow[]> {
+    // ASP.NET binds Guid[] from repeated query string keys:
+    // /api/reports/snow-comparison?resortIds=a&resortIds=b
+    let params = new HttpParams();
+    for (const id of resortIds) {
+      params = params.append('resortIds', id);
+    }
 
     return this.http.get<SnowComparisonRow[]>(
       `${API_BASE_URL}/reports/snow-comparison`,

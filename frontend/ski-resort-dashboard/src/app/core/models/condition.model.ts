@@ -1,21 +1,37 @@
 export interface SnowCondition {
-  id: number;
-  resortId: number;
-  reportedAtUtc: string;
-  baseDepthCm: number;
-  newSnow24hCm: number;
-  temperatureC?: number;
-  windSpeedKph?: number;
-  runsOpen?: number;
-  runsTotal?: number;
-  liftsOpen?: number;
-  liftsTotal?: number;
-  notes?: string;
+  id: string;
+  resortId: string;
+  observedAt: string;
+  snowDepthCm: number;
+  newSnowCm: number;
+}
+
+export interface LiftStatus {
+  id: string;
+  resortId: string;
+  name: string;
+  isOpen: boolean;
+  updatedAt: string;
+}
+
+export interface RunStatus {
+  id: string;
+  resortId: string;
+  name: string;
+  isOpen: boolean;
+  updatedAt: string;
+}
+
+export interface RunStatusPage {
+  items: RunStatus[];
+  nextUpdatedBefore?: string | null;
+  nextIdBefore?: string | null;
 }
 
 export interface ResortConditionsResponse {
   resort: import('./resort.model').Resort;
-  latestCondition: SnowCondition | null;
-  recentConditions: SnowCondition[];
+  latestSnowCondition: SnowCondition | null;
+  currentLiftStatuses: LiftStatus[];
+  runStatusPage: RunStatusPage;
 }
 

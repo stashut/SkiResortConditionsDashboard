@@ -8,7 +8,7 @@ import {
 import { Subject } from 'rxjs';
 
 export interface ResortConditionsUpdatedEvent {
-  resortId: number;
+  resortId: string;
   payload: unknown;
 }
 
@@ -32,8 +32,14 @@ export class SignalrResortUpdatesService {
       .configureLogging(LogLevel.Information)
       .build();
 
-    this.hub.on('ResortConditionsUpdated', (resortId: number, payload: unknown) => {
-      this.updatesSubject.next({ resortId, payload });
+    this.hub.on('ResortConditionsUpdated', (payload: unknown) => {
+      const anyPayload = payload as any;
+      const resortId =
+        anyPayload?.resortId ?? anyPayload?.ResortId ?? anyPayload?.ResortID;
+
+      if (typeof resortId === 'string' && resortId.length > 0) {
+        this.updatesSubject.next({ resortId, payload });
+      }
     });
 
     void this.hub
@@ -41,7 +47,7 @@ export class SignalrResortUpdatesService {
       .catch((err) => console.error('SignalR connection failed', err));
   }
 
-  subscribeToResort(resortId: number): void {
+  subscribeToResort(resortId: string): void {
     if (!this.hub || this.hub.state !== HubConnectionState.Connected) {
       return;
     }
@@ -51,7 +57,7 @@ export class SignalrResortUpdatesService {
     });
   }
 
-  unsubscribeFromResort(resortId: number): void {
+  unsubscribeFromResort(resortId: string): void {
     if (!this.hub || this.hub.state !== HubConnectionState.Connected) {
       return;
     }

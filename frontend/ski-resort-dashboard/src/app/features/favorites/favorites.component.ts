@@ -12,6 +12,8 @@ import {
   SignalrResortUpdatesService,
   ResortConditionsUpdatedEvent
 } from '../../core/services/signalr-resort-updates.service';
+import { ResortService } from '../../core/services/resort.service';
+import { forkJoin } from 'rxjs';
 
 interface FavoriteItem extends Resort {
   hasLiveUpdate?: boolean;
@@ -34,6 +36,7 @@ interface FavoriteItem extends Resort {
 })
 export class FavoritesComponent implements OnInit {
   private readonly favoritesService = inject(FavoritesService);
+  private readonly resortService = inject(ResortService);
   private readonly signalrUpdates = inject(SignalrResortUpdatesService);
 
   favorites: FavoriteItem[] = [];
@@ -63,9 +66,15 @@ export class FavoritesComponent implements OnInit {
     this.loading = true;
     this.error = undefined;
 
-    this.favoritesService.getFavorites().subscribe({
-      next: (favorites) => {
-        this.favorites = favorites;
+    forkJoin({
+      resorts: this.resortService.getResorts(),
+      favorites: this.favoritesService.getFavorites()
+    }).subscribe({
+      next: ({ resorts, favorites }) => {
+        const favoriteIds = new Set(favorites.map((f) => f.resortId));
+        this.favorites = resorts
+          .filter((r) => favoriteIds.has(r.id))
+          .map((r) => ({ ...r, hasLiveUpdate: false }));
         this.loading = false;
       },
       error: () => {

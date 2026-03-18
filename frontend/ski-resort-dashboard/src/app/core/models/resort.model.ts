@@ -1,21 +1,17 @@
 export interface Resort {
-  id: number;
+  id: string;
   name: string;
   region: string;
   country?: string;
-  baseElevationMeters?: number;
-  summitElevationMeters?: number;
-  runsOpen?: number;
-  runsTotal?: number;
-  liftsOpen?: number;
-  liftsTotal?: number;
+  elevationBaseMeters?: number;
+  elevationTopMeters?: number;
 }
 
 export interface SnowComparisonRow {
-  resortId: number;
+  resortId: string;
   resortName: string;
-  baseDepthCm: number;
-  newSnow24hCm: number;
-  newSnow72hCm: number;
+  observedAt: string;
+  snowDepthCm: number;
+  newSnowCm: number;
 }
 

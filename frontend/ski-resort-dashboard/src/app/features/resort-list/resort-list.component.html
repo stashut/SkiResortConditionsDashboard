@@ -35,23 +35,23 @@
             </td>
           </ng-container>
 
-          <ng-container matColumnDef="runs">
-            <th mat-header-cell *matHeaderCellDef>Runs</th>
+          <ng-container matColumnDef="baseElevation">
+            <th mat-header-cell *matHeaderCellDef>Base</th>
             <td mat-cell *matCellDef="let resort">
-              <span *ngIf="resort.runsTotal != null">
-                {{ resort.runsOpen ?? '?' }}/{{ resort.runsTotal }}
+              <span *ngIf="resort.elevationBaseMeters != null">
+                {{ resort.elevationBaseMeters }}m
               </span>
-              <span *ngIf="resort.runsTotal == null">–</span>
+              <span *ngIf="resort.elevationBaseMeters == null">–</span>
             </td>
           </ng-container>
 
-          <ng-container matColumnDef="lifts">
-            <th mat-header-cell *matHeaderCellDef>Lifts</th>
+          <ng-container matColumnDef="summitElevation">
+            <th mat-header-cell *matHeaderCellDef>Summit</th>
             <td mat-cell *matCellDef="let resort">
-              <span *ngIf="resort.liftsTotal != null">
-                {{ resort.liftsOpen ?? '?' }}/{{ resort.liftsTotal }}
+              <span *ngIf="resort.elevationTopMeters != null">
+                {{ resort.elevationTopMeters }}m
               </span>
-              <span *ngIf="resort.liftsTotal == null">–</span>
+              <span *ngIf="resort.elevationTopMeters == null">–</span>
             </td>
           </ng-container>
 

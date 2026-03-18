@@ -49,8 +49,8 @@ export class ResortListComponent implements OnInit, OnDestroy {
   displayedColumns = [
     'name',
     'region',
-    'runs',
-    'lifts',
+    'baseElevation',
+    'summitElevation',
     'favorite',
     'actions'
   ];
@@ -117,15 +117,19 @@ export class ResortListComponent implements OnInit, OnDestroy {
         this.resorts = resorts;
         this.loading = false;
       },
-      error: () => {
-        this.error = 'Unable to load resorts right now.';
+      error: (err) => {
+        const status = (err as any)?.status;
+        const message = (err as any)?.message;
+        this.error = `Unable to load resorts right now${status ? ` (HTTP ${status})` : ''}${
+          message ? `: ${message}` : ''
+        }.`;
         this.loading = false;
       }
     });
 
     this.favoritesService.getFavorites().subscribe({
       next: (favorites) => {
-        const favoriteIds = new Set(favorites.map((f) => f.id));
+        const favoriteIds = new Set(favorites.map((f) => f.resortId));
         this.resorts = this.resorts.map((r) => ({
           ...r,
           isFavorite: favoriteIds.has(r.id)

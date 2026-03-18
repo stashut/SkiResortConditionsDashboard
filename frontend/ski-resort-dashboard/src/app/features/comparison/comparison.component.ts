@@ -28,7 +28,7 @@ export class ComparisonComponent implements OnInit {
   private readonly resortService = inject(ResortService);
 
   allResorts: Resort[] = [];
-  selectedIds: number[] = [];
+  selectedIds: string[] = [];
 
   loadingResorts = true;
   loadingComparison = false;
@@ -37,10 +37,10 @@ export class ComparisonComponent implements OnInit {
   comparisonRows: SnowComparisonRow[] = [];
 
   readonly displayedColumns = [
-    'resort',
-    'baseDepth',
-    'newSnow24h',
-    'newSnow72h'
+    'resortName',
+    'observedAt',
+    'snowDepth',
+    'newSnow'
   ];
 
   ngOnInit(): void {

@@ -9,6 +9,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Resort } from '../../core/models/resort.model';
 import {
   ResortConditionsResponse,
+  LiftStatus,
+  RunStatus,
   SnowCondition
 } from '../../core/models/condition.model';
 import { ResortService } from '../../core/services/resort.service';
@@ -39,8 +41,9 @@ export class ResortDetailComponent implements OnInit, OnDestroy {
   private readonly signalrUpdates = inject(SignalrResortUpdatesService);
 
   resort?: Resort;
-  latestCondition?: SnowCondition | null;
-  recentConditions: SnowCondition[] = [];
+  latestSnowCondition?: SnowCondition | null;
+  currentLiftStatuses: LiftStatus[] = [];
+  recentRunStatuses: RunStatus[] = [];
 
   loading = true;
   error?: string;
@@ -48,7 +51,7 @@ export class ResortDetailComponent implements OnInit, OnDestroy {
   private updatesSub?: Subscription;
 
   ngOnInit(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
+    const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
       this.error = 'Invalid resort id.';
       this.loading = false;
@@ -63,7 +66,7 @@ export class ResortDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    const id = Number(this.route.snapshot.paramMap.get('id'));
+    const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.signalrUpdates.unsubscribeFromResort(id);
     }
@@ -71,15 +74,16 @@ export class ResortDetailComponent implements OnInit, OnDestroy {
     this.updatesSub?.unsubscribe();
   }
 
-  private loadResortConditions(id: number): void {
+  private loadResortConditions(id: string): void {
     this.loading = true;
     this.error = undefined;
 
     this.resortService.getResortConditions(id).subscribe({
       next: (response: ResortConditionsResponse) => {
         this.resort = response.resort;
-        this.latestCondition = response.latestCondition;
-        this.recentConditions = response.recentConditions;
+        this.latestSnowCondition = response.latestSnowCondition;
+        this.currentLiftStatuses = response.currentLiftStatuses;
+        this.recentRunStatuses = response.runStatusPage.items;
         this.loading = false;
       },
       error: () => {
@@ -90,7 +94,7 @@ export class ResortDetailComponent implements OnInit, OnDestroy {
   }
 
   private handleLiveUpdate(
-    currentResortId: number,
+    currentResortId: string,
     evt: ResortConditionsUpdatedEvent
   ): void {
     if (evt.resortId !== currentResortId) {
