@@ -1,0 +1,43 @@
+.shell {
+  height: 100%;
+}
+
+.shell-sidenav {
+  width: 220px;
+}
+
+.shell-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.shell-toolbar--top {
+  backdrop-filter: blur(8px);
+}
+
+.shell-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-main {
+  padding: 1.5rem;
+}
+
+.shell-menu-button {
+  margin-right: 0.75rem;
+}
+
+.shell-title {
+  font-weight: 500;
+}
+
+.shell-spacer {
+  flex: 1;
+}
+
+.logo {
+  font-weight: 600;
+}
