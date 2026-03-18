@@ -37,9 +37,22 @@ builder.Services.AddScoped<ISnowComparisonReportRepository>(sp =>
 });
 
 // Criterion 4 & 10: DynamoDB-backed user favorites (cloud-synced state)
-builder.Services.AddAWSService<IAmazonDynamoDB>();
-builder.Services.AddSingleton<IUserFavoritesRepository>(_ =>
-    new DynamoDbUserFavoritesRepository(_.GetRequiredService<IAmazonDynamoDB>(), "SkiResortUserFavorites"));
+// In local/dev we often don't have AWS credentials, so fall back to an in-memory implementation.
+var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+
+if (string.IsNullOrWhiteSpace(awsAccessKey) || string.IsNullOrWhiteSpace(awsSecretKey))
+{
+    builder.Services.AddSingleton<IUserFavoritesRepository, InMemoryUserFavoritesRepository>();
+}
+else
+{
+    builder.Services.AddAWSService<IAmazonDynamoDB>();
+    builder.Services.AddSingleton<IUserFavoritesRepository>(_ =>
+        new DynamoDbUserFavoritesRepository(
+            _.GetRequiredService<IAmazonDynamoDB>(),
+            "SkiResortUserFavorites"));
+}
 
 // Criterion 3: SQS-based weather ingestion worker
 builder.Services.AddAWSService<IAmazonSQS>();
