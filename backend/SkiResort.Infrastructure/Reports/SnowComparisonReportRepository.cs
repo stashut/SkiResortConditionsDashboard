@@ -49,16 +49,16 @@ public sealed class SnowComparisonReportRepository : ISnowComparisonReportReposi
 
         const string sql = @"
 select
-    r.id as ""ResortId"",
-    r.name as ""ResortName"",
-    sc.observedat as ""ObservedAt"",
-    sc.snowdepthcm as ""SnowDepthCm"",
-    sc.newsnowcm as ""NewSnowCm""
-from snowconditions sc
-join resorts r on sc.resortid = r.id
-where sc.observedat >= @FromInclusive
-  and sc.resortid = any(@ResortIds)
-order by r.name, sc.observedat;
+    r.""Id"" as ""ResortId"",
+    r.""Name"" as ""ResortName"",
+    sc.""ObservedAt"" as ""ObservedAt"",
+    sc.""SnowDepthCm"" as ""SnowDepthCm"",
+    sc.""NewSnowCm"" as ""NewSnowCm""
+from ""SnowConditions"" sc
+join ""Resorts"" r on sc.""ResortId"" = r.""Id""
+where sc.""ObservedAt"" >= @FromInclusive
+  and sc.""ResortId"" = any(@ResortIds)
+order by r.""Name"", sc.""ObservedAt"";
 ";
 
         var command = new CommandDefinition(
