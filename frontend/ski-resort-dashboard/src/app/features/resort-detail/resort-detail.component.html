@@ -1,0 +1,99 @@
+<section class="detail" *ngIf="!loading && !error; else state">
+  <button mat-button color="primary" routerLink="/resorts" class="detail__back">
+    <mat-icon>arrow_back</mat-icon>
+    All resorts
+  </button>
+
+  <div class="detail__layout" *ngIf="resort as r">
+    <mat-card class="detail__card">
+      <mat-card-header>
+        <mat-card-title>{{ r.name }}</mat-card-title>
+        <mat-card-subtitle>{{ r.region }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="detail__overview">
+          <div>
+            <div class="detail__metric-label">Base / Summit</div>
+            <div class="detail__metric-value">
+              <ng-container
+                *ngIf="r.elevationBaseMeters && r.elevationTopMeters; else unknown"
+              >
+                {{ r.elevationBaseMeters }}m → {{ r.elevationTopMeters }}m
+              </ng-container>
+              <ng-template #unknown>–</ng-template>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="detail__card" *ngIf="latestSnowCondition as c">
+      <mat-card-header>
+        <mat-card-title>Latest conditions</mat-card-title>
+        <mat-card-subtitle>
+          Observed {{ c.observedAt | date : 'medium' : 'UTC' }} UTC
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <div class="detail__latest-grid">
+          <div>
+            <div class="detail__metric-label">Base depth</div>
+            <div class="detail__metric-value">
+              {{ c.snowDepthCm }} cm
+            </div>
+          </div>
+          <div>
+            <div class="detail__metric-label">New snow</div>
+            <div class="detail__metric-value">
+              {{ c.newSnowCm }} cm
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="detail__card">
+      <mat-card-header>
+        <mat-card-title>Recent run status updates</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-nav-list *ngIf="recentRunStatuses.length; else noHistory">
+          <a
+            mat-list-item
+            *ngFor="let h of recentRunStatuses"
+            disableRipple
+            class="detail__history-item"
+          >
+            <span matListItemTitle>
+              {{ h.name }}
+            </span>
+            <span matListItemLine>
+              {{ h.updatedAt | date : 'short' : 'UTC' }} UTC •
+              {{ h.isOpen ? 'Open' : 'Closed' }}
+            </span>
+          </a>
+        </mat-nav-list>
+
+        <ng-template #noHistory>
+          <p class="detail__empty">No historical snow data yet.</p>
+        </ng-template>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</section>
+
+<ng-template #state>
+  <div class="detail__state" *ngIf="loading">
+    <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+    <p>Loading resort…</p>
+  </div>
+
+  <div class="detail__state detail__state--error" *ngIf="!loading && error">
+    <p>{{ error }}</p>
+    <button mat-stroked-button color="primary" routerLink="/resorts">
+      Back to list
+    </button>
+  </div>
+</ng-template>
+

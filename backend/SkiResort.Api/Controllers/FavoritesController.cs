@@ -65,6 +65,30 @@ public class FavoritesController : ControllerBase
     }
 
     /// <summary>
+    /// Convenience route for clients that POST the resortId in the URL.
+    /// </summary>
+    [HttpPost("{resortId:guid}")]
+    public async Task<IActionResult> AddFavoriteById(
+        Guid resortId,
+        CancellationToken cancellationToken)
+    {
+        if (resortId == Guid.Empty)
+        {
+            return BadRequest("A valid resortId must be provided.");
+        }
+
+        var userId = GetUserId();
+        var favorite = new UserFavorite
+        {
+            UserId = userId,
+            ResortId = resortId
+        };
+
+        await _repository.AddFavoriteAsync(favorite, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Removes a resort from the current user's favorites.
     /// </summary>
     [HttpDelete("{resortId:guid}")]

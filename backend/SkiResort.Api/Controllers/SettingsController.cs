@@ -1,4 +1,9 @@
+using System;
+using System.Collections.Concurrent;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using SkiResort.Api.Models;
 
 namespace SkiResort.Api.Controllers;
 
@@ -6,46 +11,66 @@ namespace SkiResort.Api.Controllers;
 [Route("api/settings")]
 public class SettingsController : ControllerBase
 {
-    private const string UnitPreferenceKey = "UnitPreference";
-    private const string RegionFilterKey = "RegionFilter";
-    private const string LastViewedResortKey = "LastViewedResort";
+    private static readonly ConcurrentDictionary<string, UserSettingsDto> Store = new();
 
-    // Criterion 10: Read active user context stored in session
     [HttpGet]
-    public ActionResult GetSettings()
+    public Task<ActionResult<UserSettingsDto>> GetSettings(CancellationToken cancellationToken)
     {
-        var unitPreference = HttpContext.Session.GetString(UnitPreferenceKey) ?? "cm";
-        var regionFilter = HttpContext.Session.GetString(RegionFilterKey) ?? "All";
-        var lastViewedResort = HttpContext.Session.GetString(LastViewedResortKey);
+        var userId = GetUserId();
 
-        return Ok(new
+        if (!Store.TryGetValue(userId, out var settings))
         {
-            UnitPreference = unitPreference,
-            RegionFilter = regionFilter,
-            LastViewedResort = lastViewedResort
-        });
-    }
-
-    // Criterion 10: Update session-backed preferences
-    [HttpPost]
-    public IActionResult SaveSettings([FromBody] SaveSettingsRequest request)
-    {
-        HttpContext.Session.SetString(UnitPreferenceKey, request.UnitPreference ?? "cm");
-        HttpContext.Session.SetString(RegionFilterKey, request.RegionFilter ?? "All");
-
-        if (!string.IsNullOrWhiteSpace(request.LastViewedResort))
-        {
-            HttpContext.Session.SetString(LastViewedResortKey, request.LastViewedResort);
+            settings = new UserSettingsDto("imperial", null, null);
         }
 
-        return NoContent();
+        return Task.FromResult<ActionResult<UserSettingsDto>>(Ok(settings));
     }
 
-    public sealed class SaveSettingsRequest
+    [HttpPost]
+    public Task<IActionResult> SaveSettings(
+        [FromBody] UserSettingsDto request,
+        CancellationToken cancellationToken)
     {
-        public string? UnitPreference { get; set; }
-        public string? RegionFilter { get; set; }
-        public string? LastViewedResort { get; set; }
+        if (request is null)
+        {
+            return Task.FromResult<IActionResult>(BadRequest("Settings payload is required."));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.UnitPreference))
+        {
+            return Task.FromResult<IActionResult>(BadRequest("unitPreference is required."));
+        }
+
+        var normalized = request.UnitPreference.Trim().ToLowerInvariant();
+        if (normalized != "imperial" && normalized != "metric")
+        {
+            return Task.FromResult<IActionResult>(BadRequest("unitPreference must be 'imperial' or 'metric'."));
+        }
+
+        var userId = GetUserId();
+
+        var stored = new UserSettingsDto(
+            normalized,
+            string.IsNullOrWhiteSpace(request.RegionFilter) ? null : request.RegionFilter,
+            NormalizeLastViewedResortId(request.LastViewedResortId));
+
+        Store[userId] = stored;
+        return Task.FromResult<IActionResult>(NoContent());
+    }
+
+    private string GetUserId()
+    {
+        var headerUserId = HttpContext.Request.Headers["X-User-Id"].ToString();
+        return string.IsNullOrWhiteSpace(headerUserId) ? "demo-user" : headerUserId;
+    }
+
+    private static string? NormalizeLastViewedResortId(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return Guid.TryParse(value, out _) ? value : null;
     }
 }
-

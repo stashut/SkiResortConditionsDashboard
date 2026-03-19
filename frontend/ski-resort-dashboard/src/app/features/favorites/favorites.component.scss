@@ -1,0 +1,47 @@
+.favorites {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.favorites__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.favorites__subtitle {
+  margin: 0.25rem 0 0;
+  opacity: 0.75;
+}
+
+.favorites__empty {
+  opacity: 0.85;
+}
+
+.favorites__badge {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.favorites__badge--live {
+  background: rgba(45, 212, 191, 0.15);
+  color: #2dd4bf;
+}
+
+.favorites__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 3rem 0;
+}
+
+.favorites__state--error {
+  color: #fecaca;
+}
+
