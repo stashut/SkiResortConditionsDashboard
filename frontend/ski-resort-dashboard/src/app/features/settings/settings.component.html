@@ -8,6 +8,13 @@
     </div>
   </header>
 
+  <p
+    class="settings__live"
+    *ngIf="subscribedLastViewedResortId != null && lastLiveUpdateAt"
+  >
+    Live update for last viewed resort received
+    {{ lastLiveUpdateAt | date : 'medium' : 'UTC' }} UTC.
+  </p>
   <mat-card>
     <mat-card-content>
       <form class="settings__form" [formGroup]="form" (ngSubmit)="save()">

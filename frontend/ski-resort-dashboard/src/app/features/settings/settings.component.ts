@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -9,6 +9,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SettingsService } from '../../core/services/settings.service';
 import { UnitPreference, UserSettings } from '../../core/models/settings.model';
+import {
+  ResortConditionsUpdatedEvent,
+  SignalrResortUpdatesService
+} from '../../core/services/signalr-resort-updates.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   standalone: true,
@@ -26,10 +31,15 @@ import { UnitPreference, UserSettings } from '../../core/models/settings.model';
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss'
 })
-export class SettingsComponent implements OnInit {
+export class SettingsComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly settingsService = inject(SettingsService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly signalrUpdates = inject(SignalrResortUpdatesService);
+
+  private updatesSub?: Subscription;
+  subscribedLastViewedResortId?: number;
+  lastLiveUpdateAt?: string;
 
   loading = true;
   saving = false;
@@ -42,10 +52,14 @@ export class SettingsComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.updatesSub = this.signalrUpdates.updates$.subscribe((evt) =>
+      this.handleLiveUpdate(evt)
+    );
     this.settingsService.getSettings().subscribe({
       next: (settings) => {
         this.patchForm(settings);
         this.loading = false;
+        this.syncSignalrForLastViewed(settings);
       },
       error: () => {
         // It is fine if settings do not exist yet
@@ -54,6 +68,14 @@ export class SettingsComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.updatesSub?.unsubscribe();
+    if (this.subscribedLastViewedResortId != null) {
+      this.signalrUpdates.unsubscribeFromResort(
+        this.subscribedLastViewedResortId.toString()
+      );
+    }
+  }
   save(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -75,6 +97,7 @@ export class SettingsComponent implements OnInit {
     this.settingsService.saveSettings(payload).subscribe({
       next: () => {
         this.saving = false;
+        this.syncSignalrForLastViewed(payload);
         this.snackBar.open('Settings saved', undefined, { duration: 2000 });
       },
       error: () => {
@@ -90,6 +113,40 @@ export class SettingsComponent implements OnInit {
       regionFilter: settings.regionFilter ?? '',
       lastViewedResortId: settings.lastViewedResortId?.toString() ?? ''
     });
+  }
+  private syncSignalrForLastViewed(settings: UserSettings): void {
+    const nextId = settings.lastViewedResortId;
+
+    if (this.subscribedLastViewedResortId === nextId) {
+      return;
+    }
+
+    if (this.subscribedLastViewedResortId != null) {
+      this.signalrUpdates.unsubscribeFromResort(
+        this.subscribedLastViewedResortId.toString()
+      );
+    }
+
+    this.subscribedLastViewedResortId = nextId;
+    this.lastLiveUpdateAt = undefined;
+
+    if (this.subscribedLastViewedResortId != null) {
+      this.signalrUpdates.subscribeToResort(
+        this.subscribedLastViewedResortId.toString()
+      );
+    }
+  }
+
+  private handleLiveUpdate(evt: ResortConditionsUpdatedEvent): void {
+    if (this.subscribedLastViewedResortId == null) {
+      return;
+    }
+
+    if (evt.resortId !== this.subscribedLastViewedResortId.toString()) {
+      return;
+    }
+
+    this.lastLiveUpdateAt = new Date().toISOString();
   }
 }
 

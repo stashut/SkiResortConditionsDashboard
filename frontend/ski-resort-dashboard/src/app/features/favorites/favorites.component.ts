@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -14,6 +14,7 @@ import {
 } from '../../core/services/signalr-resort-updates.service';
 import { ResortService } from '../../core/services/resort.service';
 import { forkJoin } from 'rxjs';
+import { Subscription } from 'rxjs';
 
 interface FavoriteItem extends Resort {
   hasLiveUpdate?: boolean;
@@ -34,7 +35,7 @@ interface FavoriteItem extends Resort {
   templateUrl: './favorites.component.html',
   styleUrl: './favorites.component.scss'
 })
-export class FavoritesComponent implements OnInit {
+export class FavoritesComponent implements OnInit, OnDestroy {
   private readonly favoritesService = inject(FavoritesService);
   private readonly resortService = inject(ResortService);
   private readonly signalrUpdates = inject(SignalrResortUpdatesService);
@@ -43,18 +44,31 @@ export class FavoritesComponent implements OnInit {
   loading = true;
   error?: string;
 
+  private updatesSub?: Subscription;
+  private subscribedFavoriteResortIds = new Set<string>();
+
   ngOnInit(): void {
     this.loadFavorites();
 
-    this.signalrUpdates.updates$.subscribe((evt) =>
+    this.updatesSub = this.signalrUpdates.updates$.subscribe((evt) =>
       this.handleLiveUpdate(evt)
     );
   }
 
+  ngOnDestroy(): void {
+    this.updatesSub?.unsubscribe();
+
+    for (const id of this.subscribedFavoriteResortIds) {
+      this.signalrUpdates.unsubscribeFromResort(id);
+    }
+    this.subscribedFavoriteResortIds.clear();
+  }
   removeFavorite(resort: FavoriteItem): void {
     this.favoritesService.removeFavorite(resort.id).subscribe({
       next: () => {
         this.favorites = this.favorites.filter((f) => f.id !== resort.id);
+        this.subscribedFavoriteResortIds.delete(resort.id);
+        this.signalrUpdates.unsubscribeFromResort(resort.id);
       },
       error: () => {
         this.error = 'Failed to remove favorite.';
@@ -75,6 +89,7 @@ export class FavoritesComponent implements OnInit {
         this.favorites = resorts
           .filter((r) => favoriteIds.has(r.id))
           .map((r) => ({ ...r, hasLiveUpdate: false }));
+        this.syncSignalrSubscriptions(this.favorites.map((f) => f.id));
         this.loading = false;
       },
       error: () => {
@@ -84,6 +99,23 @@ export class FavoritesComponent implements OnInit {
     });
   }
 
+  private syncSignalrSubscriptions(resortIds: string[]): void {
+    const next = new Set(resortIds);
+
+    for (const id of this.subscribedFavoriteResortIds) {
+      if (!next.has(id)) {
+        this.signalrUpdates.unsubscribeFromResort(id);
+      }
+    }
+
+    for (const id of next) {
+      if (!this.subscribedFavoriteResortIds.has(id)) {
+        this.signalrUpdates.subscribeToResort(id);
+      }
+    }
+
+    this.subscribedFavoriteResortIds = next;
+  }
   private handleLiveUpdate(evt: ResortConditionsUpdatedEvent): void {
     const match = this.favorites.find((f) => f.id === evt.resortId);
     if (!match) {

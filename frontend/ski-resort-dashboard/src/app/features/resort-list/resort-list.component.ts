@@ -60,6 +60,7 @@ export class ResortListComponent implements OnInit, OnDestroy {
   error?: string;
 
   private updatesSub?: Subscription;
+  private subscribedResortIds = new Set<string>();
 
   ngOnInit(): void {
     this.loadData();
@@ -70,6 +71,10 @@ export class ResortListComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.updatesSub?.unsubscribe();
+    for (const id of this.subscribedResortIds) {
+      this.signalrUpdates.unsubscribeFromResort(id);
+    }
+    this.subscribedResortIds.clear();
   }
 
   navigateTo(resort: Resort): void {
@@ -116,6 +121,7 @@ export class ResortListComponent implements OnInit, OnDestroy {
       next: (resorts) => {
         this.resorts = resorts;
         this.loading = false;
+        this.syncSignalrSubscriptions(resorts.map((r) => r.id));
       },
       error: (err) => {
         const status = (err as any)?.status;
@@ -141,6 +147,23 @@ export class ResortListComponent implements OnInit, OnDestroy {
     });
   }
 
+  private syncSignalrSubscriptions(resortIds: string[]): void {
+    const next = new Set(resortIds);
+
+    for (const id of this.subscribedResortIds) {
+      if (!next.has(id)) {
+        this.signalrUpdates.unsubscribeFromResort(id);
+      }
+    }
+
+    for (const id of next) {
+      if (!this.subscribedResortIds.has(id)) {
+        this.signalrUpdates.subscribeToResort(id);
+      }
+    }
+
+    this.subscribedResortIds = next;
+  }
   private handleLiveUpdate(evt: ResortConditionsUpdatedEvent): void {
     const target = this.resorts.find((r) => r.id === evt.resortId);
     if (!target) {
