@@ -3,7 +3,11 @@ using Amazon.DynamoDBv2;
 using Amazon.Extensions.NETCore.Setup;
 using Amazon.SQS;
 using Microsoft.EntityFrameworkCore;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using SkiResort.Api.Hubs;
+using SkiResort.Api.Observability;
 using SkiResort.Api.Options;
 using SkiResort.Api.Realtime;
 using SkiResort.Api.Workers;
@@ -63,9 +67,41 @@ builder.Services.AddHostedService<SqsIngestionWorker>();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<ResortUpdateNotifier>();
 
+// Session middleware (available for request-scoped state)
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.Cookie.Name = ".SkiResort.Session";
+    options.Cookie.HttpOnly = true;
+    options.IdleTimeout = TimeSpan.FromHours(8);
+});
+
+// Criterion 8: OpenTelemetry instrumentation exported via OTLP
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService("SkiResort.Api"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddEntityFrameworkCoreInstrumentation()
+            .AddSource(ObservabilityConstants.ActivitySourceName)
+            .AddOtlpExporter();
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddMeter(ObservabilityConstants.MeterName)
+            .AddOtlpExporter();
+    });
+
 builder.Services.AddControllers();
 
 var app = builder.Build();
+
+app.UseSession();
 
 // Dev-only: create schema + seed sample data if the DB is empty.
 // This avoids "relation ... does not exist" when running locally without migrations.

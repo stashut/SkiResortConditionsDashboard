@@ -41,7 +41,6 @@ public class SettingsController : ControllerBase
             return Task.FromResult<IActionResult>(BadRequest("unitPreference is required."));
         }
 
-        // Keep it minimal: accept any string, but validate the known values.
         var normalized = request.UnitPreference.Trim().ToLowerInvariant();
         if (normalized != "imperial" && normalized != "metric")
         {
@@ -61,7 +60,6 @@ public class SettingsController : ControllerBase
 
     private string GetUserId()
     {
-        // Match FavoritesController approach for now.
         var headerUserId = HttpContext.Request.Headers["X-User-Id"].ToString();
         return string.IsNullOrWhiteSpace(headerUserId) ? "demo-user" : headerUserId;
     }
@@ -73,8 +71,6 @@ public class SettingsController : ControllerBase
             return null;
         }
 
-        // Accept only valid GUID strings; otherwise keep it unset.
         return Guid.TryParse(value, out _) ? value : null;
     }
 }
-
