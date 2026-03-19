@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SkiResort.Api.Models;
+using SkiResort.Api.Observability;
 using SkiResort.Api.Options;
 using SkiResort.Api.Realtime;
 using SkiResort.Domain.Entities;
@@ -105,8 +106,10 @@ public sealed class SqsIngestionWorker : BackgroundService
         ResortUpdateNotifier notifier,
         CancellationToken cancellationToken)
     {
+        var startedAt = DateTimeOffset.UtcNow;
         try
         {
+            using var activity = ObservabilityConstants.ActivitySource.StartActivity("ProcessSqsWeatherMessage");
             var ingestion = JsonSerializer.Deserialize<WeatherIngestionMessage>(message.Body, SerializerOptions);
             if (ingestion is null || ingestion.ResortId == Guid.Empty)
             {
@@ -143,6 +146,8 @@ public sealed class SqsIngestionWorker : BackgroundService
                 .ConfigureAwait(false);
 
             await DeleteMessageAsync(message, cancellationToken).ConfigureAwait(false);
+            ObservabilityConstants.SqsMessagesProcessed.Add(1);
+            ObservabilityConstants.SqsProcessingDurationMs.Record((DateTimeOffset.UtcNow - startedAt).TotalMilliseconds);
         }
         catch (Exception ex)
         {
