@@ -1,0 +1,111 @@
+{
+  "consumer": {
+    "name": "SkiResortDashboardFrontend"
+  },
+  "interactions": [
+    {
+      "description": "A request for all ski resorts",
+      "pending": false,
+      "request": {
+        "method": "GET",
+        "path": "/api/resorts"
+      },
+      "response": {
+        "body": {
+          "content": [
+            {
+              "country": "USA",
+              "elevationBaseMeters": 1200,
+              "elevationTopMeters": 3000,
+              "id": "56bb5f39-05f1-4887-8c7d-03dcfd9595be",
+              "name": "Alpine Peak",
+              "region": "Rockies"
+            }
+          ],
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "matchingRules": {
+          "body": {
+            "$": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type",
+                  "min": 1
+                }
+              ]
+            },
+            "$[*].country": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$[*].elevationBaseMeters": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$[*].elevationTopMeters": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$[*].id": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$[*].name": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$[*].region": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          }
+        },
+        "status": 200
+      },
+      "type": "Synchronous/HTTP"
+    }
+  ],
+  "metadata": {
+    "pactRust": {
+      "ffi": "0.4.27",
+      "models": "1.2.8"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "SkiResortApi"
+  }
+}
