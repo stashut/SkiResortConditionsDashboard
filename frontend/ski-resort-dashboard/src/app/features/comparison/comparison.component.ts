@@ -8,6 +8,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Resort, SnowComparisonRow } from '../../core/models/resort.model';
 import { ResortService } from '../../core/services/resort.service';
+import { UnitsService } from '../../core/services/units.service';
 import {
   SignalrResortUpdatesService,
   ResortConditionsUpdatedEvent
@@ -32,6 +33,7 @@ import { Subscription } from 'rxjs';
 export class ComparisonComponent implements OnInit, OnDestroy {
   private readonly resortService = inject(ResortService);
   private readonly signalrUpdates = inject(SignalrResortUpdatesService);
+  readonly units = inject(UnitsService);
 
   private updatesSub?: Subscription;
   private subscribedResortIds = new Set<string>();

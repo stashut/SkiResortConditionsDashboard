@@ -8,6 +8,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { SettingsService } from '../../core/services/settings.service';
+import { UnitsService } from '../../core/services/units.service';
 import { UnitPreference, UserSettings } from '../../core/models/settings.model';
 import {
   ResortConditionsUpdatedEvent,
@@ -34,6 +35,7 @@ import { Subscription } from 'rxjs';
 export class SettingsComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly settingsService = inject(SettingsService);
+  private readonly unitsService = inject(UnitsService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly signalrUpdates = inject(SignalrResortUpdatesService);
 
@@ -57,6 +59,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     );
     this.settingsService.getSettings().subscribe({
       next: (settings) => {
+        this.unitsService.setPreference(settings.unitPreference);
         this.patchForm(settings);
         this.loading = false;
         this.syncSignalrForLastViewed(settings);
@@ -97,6 +100,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.settingsService.saveSettings(payload).subscribe({
       next: () => {
         this.saving = false;
+        this.unitsService.setPreference(payload.unitPreference);
         this.syncSignalrForLastViewed(payload);
         this.snackBar.open('Settings saved', undefined, { duration: 2000 });
       },

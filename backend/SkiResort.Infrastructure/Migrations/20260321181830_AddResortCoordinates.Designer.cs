@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SkiResort.Infrastructure.Data;
@@ -11,9 +12,11 @@ using SkiResort.Infrastructure.Data;
 namespace SkiResort.Infrastructure.Migrations
 {
     [DbContext(typeof(SkiResortDbContext))]
-    partial class SkiResortDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260321181830_AddResortCoordinates")]
+    partial class AddResortCoordinates
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -115,52 +118,16 @@ namespace SkiResort.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<decimal?>("ApparentTemperatureCelsius")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("CloudCoverPercent")
-                        .HasColumnType("numeric");
-
                     b.Property<decimal>("NewSnowCm")
                         .HasColumnType("numeric");
 
                     b.Property<DateTimeOffset>("ObservedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal?>("PrecipitationMm")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("RainMm")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("RelativeHumidityPercent")
-                        .HasColumnType("numeric");
-
                     b.Property<Guid>("ResortId")
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("SnowDepthCm")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("SurfacePressureHpa")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("TemperatureCelsius")
-                        .HasColumnType("numeric");
-
-                    b.Property<int?>("VisibilityMeters")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("WeatherCode")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("WindDirectionDeg")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal?>("WindGustsKmh")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal?>("WindSpeedKmh")
                         .HasColumnType("numeric");
 
                     b.HasKey("Id");
