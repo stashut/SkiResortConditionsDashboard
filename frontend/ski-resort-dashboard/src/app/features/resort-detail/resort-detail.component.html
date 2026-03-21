@@ -6,9 +6,21 @@
 
   <div class="detail__layout" *ngIf="resort as r">
     <mat-card class="detail__card">
-      <mat-card-header>
-        <mat-card-title>{{ r.name }}</mat-card-title>
-        <mat-card-subtitle>{{ r.region }}</mat-card-subtitle>
+      <mat-card-header class="detail__card-header">
+        <div class="detail__card-header-text">
+          <mat-card-title>{{ r.name }}</mat-card-title>
+          <mat-card-subtitle>{{ r.region }}</mat-card-subtitle>
+        </div>
+        <button
+          mat-icon-button
+          type="button"
+          class="detail__fav-btn"
+          [class.detail__fav-btn--on]="isFavorite"
+          (click)="toggleFavorite()"
+          [matTooltip]="isFavorite ? 'Remove favorite' : 'Add favorite'"
+          aria-label="Toggle favorite">
+          <mat-icon>{{ isFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
+        </button>
       </mat-card-header>
       <mat-card-content>
         <div class="detail__overview">
@@ -18,7 +30,7 @@
               <ng-container
                 *ngIf="r.elevationBaseMeters && r.elevationTopMeters; else unknown"
               >
-                {{ r.elevationBaseMeters }}m → {{ r.elevationTopMeters }}m
+                {{ units.formatElevationRange(r.elevationBaseMeters, r.elevationTopMeters) }}
               </ng-container>
               <ng-template #unknown>–</ng-template>
             </div>
@@ -31,7 +43,7 @@
       <mat-card-header>
         <mat-card-title>Latest conditions</mat-card-title>
         <mat-card-subtitle>
-          Observed {{ c.observedAt | date : 'medium' : 'UTC' }} UTC
+          Observed {{ c.observedAt | date : 'medium' : 'UTC' }} UTC · Open-Meteo
         </mat-card-subtitle>
       </mat-card-header>
 
@@ -40,14 +52,67 @@
           <div>
             <div class="detail__metric-label">Base depth</div>
             <div class="detail__metric-value">
-              {{ c.snowDepthCm }} cm
+              {{ units.formatSnowCm(c.snowDepthCm) }}
             </div>
           </div>
           <div>
             <div class="detail__metric-label">New snow</div>
             <div class="detail__metric-value">
-              {{ c.newSnowCm }} cm
+              {{ units.formatSnowCm(c.newSnowCm) }}
             </div>
+          </div>
+        </div>
+        <div class="detail__weather-grid">
+          <div class="detail__weather-cell">
+            <div class="detail__metric-label">Temp (2 m)</div>
+            <div class="detail__metric-value">{{ fmt(c.temperatureCelsius, ' °C', 1) }}</div>
+          </div>
+          <div class="detail__weather-cell">
+            <div class="detail__metric-label">Feels like</div>
+            <div class="detail__metric-value">{{ fmt(c.apparentTemperatureCelsius, ' °C', 1) }}</div>
+          </div>
+          <div class="detail__weather-cell">
+            <div class="detail__metric-label">Humidity</div>
+            <div class="detail__metric-value">{{ fmt(c.relativeHumidityPercent, ' %', 0) }}</div>
+          </div>
+          <div class="detail__weather-cell">
+            <div class="detail__metric-label">Precip (1 h)</div>
+            <div class="detail__metric-value">{{ units.formatPrecipMm(c.precipitationMm, 2) }}</div>
+          </div>
+          <div class="detail__weather-cell">
+            <div class="detail__metric-label">Rain (1 h)</div>
+            <div class="detail__metric-value">{{ units.formatPrecipMm(c.rainMm, 2) }}</div>
+          </div>
+          <div class="detail__weather-cell detail__weather-cell--wide">
+            <div class="detail__metric-label">Weather</div>
+            <div class="detail__metric-value">
+              <span *ngIf="c.weatherCode != null" class="detail__weather-code">{{ c.weatherCode }}</span>
+              {{ weatherLabel(c.weatherCode) }}
+            </div>
+          </div>
+          <div class="detail__weather-cell">
+            <div class="detail__metric-label">Cloud cover</div>
+            <div class="detail__metric-value">{{ fmt(c.cloudCoverPercent, ' %', 0) }}</div>
+          </div>
+          <div class="detail__weather-cell">
+            <div class="detail__metric-label">Wind</div>
+            <div class="detail__metric-value">{{ units.formatWindKmh(c.windSpeedKmh, 1) }}</div>
+          </div>
+          <div class="detail__weather-cell">
+            <div class="detail__metric-label">Gusts</div>
+            <div class="detail__metric-value">{{ units.formatWindKmh(c.windGustsKmh, 1) }}</div>
+          </div>
+          <div class="detail__weather-cell">
+            <div class="detail__metric-label">Wind dir</div>
+            <div class="detail__metric-value detail__metric-value--sm">{{ windDir(c.windDirectionDeg) }}</div>
+          </div>
+          <div class="detail__weather-cell">
+            <div class="detail__metric-label">Visibility</div>
+            <div class="detail__metric-value">{{ units.formatVisibilityM(c.visibilityMeters) }}</div>
+          </div>
+          <div class="detail__weather-cell">
+            <div class="detail__metric-label">Pressure</div>
+            <div class="detail__metric-value">{{ units.formatPressureHpa(c.surfacePressureHpa) }}</div>
           </div>
         </div>
       </mat-card-content>

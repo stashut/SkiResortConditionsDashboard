@@ -1,111 +1,242 @@
-<section class="resort-list">
-  <mat-card class="resort-list__card">
-    <mat-card-header>
-      <div mat-card-avatar class="resort-list__icon">
-        <mat-icon>terrain</mat-icon>
-      </div>
-      <div>
-        <mat-card-title>Resorts</mat-card-title>
-        <mat-card-subtitle>
-          Browse all ski resorts and jump into live conditions.
-        </mat-card-subtitle>
-      </div>
-    </mat-card-header>
+<div class="resort-layout">
 
-    <mat-card-content>
-      <div class="resort-list__content" *ngIf="!loading && !error; else state">
-        <table mat-table [dataSource]="resorts" class="mat-elevation-z2">
-          <ng-container matColumnDef="name">
-            <th mat-header-cell *matHeaderCellDef>Resort</th>
-            <td mat-cell *matCellDef="let resort">
-              <span class="resort-list__name">{{ resort.name }}</span>
-              <span
-                class="resort-list__badge resort-list__badge--live"
-                *ngIf="resort.hasLiveUpdate"
-              >
-                Live update
-              </span>
-            </td>
-          </ng-container>
+  <!-- Left: Map (70%) -->
+  <div class="resort-map-panel">
+    <div #mapContainer class="resort-map-canvas"></div>
+  </div>
 
-          <ng-container matColumnDef="region">
-            <th mat-header-cell *matHeaderCellDef>Region</th>
-            <td mat-cell *matCellDef="let resort">
-              {{ resort.region }}
-            </td>
-          </ng-container>
+  <!-- Right: List or Detail (30%) -->
+  <div class="resort-table-panel">
 
-          <ng-container matColumnDef="baseElevation">
-            <th mat-header-cell *matHeaderCellDef>Base</th>
-            <td mat-cell *matCellDef="let resort">
-              <span *ngIf="resort.elevationBaseMeters != null">
-                {{ resort.elevationBaseMeters }}m
-              </span>
-              <span *ngIf="resort.elevationBaseMeters == null">–</span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="summitElevation">
-            <th mat-header-cell *matHeaderCellDef>Summit</th>
-            <td mat-cell *matCellDef="let resort">
-              <span *ngIf="resort.elevationTopMeters != null">
-                {{ resort.elevationTopMeters }}m
-              </span>
-              <span *ngIf="resort.elevationTopMeters == null">–</span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="favorite">
-            <th mat-header-cell *matHeaderCellDef>Favorite</th>
-            <td mat-cell *matCellDef="let resort">
-              <button
-                mat-icon-button
-                color="primary"
-                (click)="toggleFavorite(resort)"
-                [matTooltip]="resort.isFavorite ? 'Remove favorite' : 'Add favorite'"
-              >
-                <mat-icon>
-                  {{ resort.isFavorite ? 'favorite' : 'favorite_border' }}
-                </mat-icon>
-              </button>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef></th>
-            <td mat-cell *matCellDef="let resort">
-              <button
-                mat-stroked-button
-                color="accent"
-                (click)="navigateTo(resort)"
-              >
-                View details
-              </button>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
-        </table>
-      </div>
-
-      <ng-template #state>
-        <div class="resort-list__state" *ngIf="loading">
-          <mat-progress-spinner
-            mode="indeterminate"
-            diameter="40"
-          ></mat-progress-spinner>
-          <p>Loading resorts…</p>
+    <!-- ── LIST MODE ─────────────────────────────────────────────────── -->
+    <ng-container *ngIf="panelMode === 'list'">
+      <div class="panel-header">
+        <mat-icon class="panel-header__icon">terrain</mat-icon>
+        <div>
+          <div class="panel-header__title">Ski Resorts</div>
+          <div class="panel-header__sub">{{ resorts.length }} resorts worldwide</div>
         </div>
+      </div>
 
-        <div
-          class="resort-list__state resort-list__state--error"
-          *ngIf="!loading && error"
-        >
+      <ng-container *ngIf="!loading && !error; else listState">
+        <div class="panel-scroll">
+          <table mat-table [dataSource]="resorts">
+            <ng-container matColumnDef="resort">
+              <th mat-header-cell *matHeaderCellDef>Resort</th>
+              <td mat-cell *matCellDef="let resort" class="cell-name">
+                <div class="resort-name">{{ resort.name }}</div>
+                <div class="resort-meta">
+                  <span class="resort-region">{{ resort.region }}</span>
+                  <span class="resort-elev" *ngIf="resort.elevationTopMeters"> · {{ units.formatElevationTop(resort.elevationTopMeters) }}</span>
+                </div>
+                <span class="badge-live" *ngIf="resort.hasLiveUpdate">● live</span>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let resort" class="cell-actions">
+                <button mat-icon-button class="btn-fav"
+                  (click)="toggleFavorite(resort); $event.stopPropagation()"
+                  [matTooltip]="resort.isFavorite ? 'Remove favorite' : 'Add favorite'">
+                  <mat-icon>{{ resort.isFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
+                </button>
+                <button mat-icon-button class="btn-detail"
+                  (click)="selectResort(resort)"
+                  matTooltip="View details">
+                  <mat-icon>chevron_right</mat-icon>
+                </button>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns"
+              class="resort-row"
+              (click)="selectResort(row)">
+            </tr>
+          </table>
+        </div>
+      </ng-container>
+
+      <ng-template #listState>
+        <div class="panel-state" *ngIf="loading">
+          <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
+          <p>Loading…</p>
+        </div>
+        <div class="panel-state panel-state--error" *ngIf="!loading && error">
+          <mat-icon>error_outline</mat-icon>
           <p>{{ error }}</p>
         </div>
       </ng-template>
-    </mat-card-content>
-  </mat-card>
-</section>
+    </ng-container>
 
+    <!-- ── DETAIL MODE ────────────────────────────────────────────────── -->
+    <ng-container *ngIf="panelMode === 'detail'">
+      <div class="panel-header panel-header--detail">
+        <button mat-icon-button class="btn-back" (click)="backToList()" matTooltip="Back to all resorts">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <div class="panel-header__title">{{ detailResort?.name }}</div>
+        <button
+          *ngIf="detailResort"
+          mat-icon-button
+          class="btn-fav btn-fav--header"
+          type="button"
+          (click)="toggleFavorite(detailResort); $event.stopPropagation()"
+          [matTooltip]="detailResort.isFavorite ? 'Remove favorite' : 'Add favorite'">
+          <mat-icon>{{ detailResort.isFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
+        </button>
+      </div>
+
+      <div class="panel-scroll" *ngIf="!detailLoading && !detailError; else detailState">
+
+        <!-- Resort info -->
+        <div class="detail-section">
+          <div class="detail-label">Region</div>
+          <div class="detail-value">{{ detailResort?.region }}
+            <span *ngIf="detailResort?.country" class="detail-country"> · {{ detailResort?.country }}</span>
+          </div>
+
+          <ng-container *ngIf="detailResort?.elevationBaseMeters && detailResort?.elevationTopMeters">
+            <div class="detail-label" style="margin-top: 0.75rem">Elevation</div>
+            <div class="detail-value detail-elev">
+              ▲ {{ units.formatElevationRange(detailResort?.elevationBaseMeters, detailResort?.elevationTopMeters) }}
+            </div>
+          </ng-container>
+        </div>
+
+        <mat-divider class="panel-divider"></mat-divider>
+
+        <!-- Latest snow + Open-Meteo weather -->
+        <div class="detail-section" *ngIf="detailSnow">
+          <div class="detail-section__title">
+            <mat-icon>ac_unit</mat-icon>
+            Latest conditions
+          </div>
+          <div class="detail-sub">Observed {{ detailSnow.observedAt | date:'MMM d, y, HH:mm':'UTC' }} UTC · Open-Meteo</div>
+          <div class="detail-snow-grid">
+            <div class="detail-snow-card">
+              <div class="detail-label">Base depth</div>
+              <div class="detail-big-value">{{ detailSnow.snowDepthCm }} <span class="unit">cm</span></div>
+            </div>
+            <div class="detail-snow-card">
+              <div class="detail-label">New snow</div>
+              <div class="detail-big-value">{{ detailSnow.newSnowCm }} <span class="unit">cm</span></div>
+            </div>
+          </div>
+          <div class="detail-weather-grid">
+            <div class="detail-weather-cell">
+              <div class="detail-label">{{ units.heightAboveGroundLabel() }}</div>
+              <div class="detail-weather-value">{{ units.formatTempC(detailSnow.temperatureCelsius) }}</div>
+            </div>
+            <div class="detail-weather-cell">
+              <div class="detail-label">Feels like</div>
+              <div class="detail-weather-value">{{ units.formatTempC(detailSnow.apparentTemperatureCelsius) }}</div>
+            </div>
+            <div class="detail-weather-cell">
+              <div class="detail-label">Humidity</div>
+              <div class="detail-weather-value">{{ fmt(detailSnow.relativeHumidityPercent, ' %', 0) }}</div>
+            </div>
+            <div class="detail-weather-cell">
+              <div class="detail-label">Precip (1 h)</div>
+              <div class="detail-weather-value">{{ units.formatPrecipMm(detailSnow.precipitationMm, 2) }}</div>
+            </div>
+            <div class="detail-weather-cell">
+              <div class="detail-label">Rain (1 h)</div>
+              <div class="detail-weather-value">{{ units.formatPrecipMm(detailSnow.rainMm, 2) }}</div>
+            </div>
+            <div class="detail-weather-cell detail-weather-cell--wide">
+              <div class="detail-label">Weather</div>
+              <div class="detail-weather-value">
+                <span *ngIf="detailSnow.weatherCode != null" class="detail-weather-code">{{ detailSnow.weatherCode }}</span>
+                {{ weatherLabel(detailSnow.weatherCode) }}
+              </div>
+            </div>
+            <div class="detail-weather-cell">
+              <div class="detail-label">Cloud cover</div>
+              <div class="detail-weather-value">{{ fmt(detailSnow.cloudCoverPercent, ' %', 0) }}</div>
+            </div>
+            <div class="detail-weather-cell">
+              <div class="detail-label">Wind</div>
+              <div class="detail-weather-value">{{ units.formatWindKmh(detailSnow.windSpeedKmh, 1) }}</div>
+            </div>
+            <div class="detail-weather-cell">
+              <div class="detail-label">Gusts</div>
+              <div class="detail-weather-value">{{ units.formatWindKmh(detailSnow.windGustsKmh, 1) }}</div>
+            </div>
+            <div class="detail-weather-cell">
+              <div class="detail-label">Wind dir</div>
+              <div class="detail-weather-value detail-weather-value--sm">{{ windDir(detailSnow.windDirectionDeg) }}</div>
+            </div>
+            <div class="detail-weather-cell">
+              <div class="detail-label">Visibility</div>
+              <div class="detail-weather-value">{{ units.formatVisibilityM(detailSnow.visibilityMeters) }}</div>
+            </div>
+            <div class="detail-weather-cell">
+              <div class="detail-label">Pressure</div>
+              <div class="detail-weather-value">{{ units.formatPressureHpa(detailSnow.surfacePressureHpa) }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="detail-section detail-no-data" *ngIf="!detailSnow">
+          <mat-icon>ac_unit</mat-icon>
+          <span>No snow data yet</span>
+        </div>
+
+        <mat-divider class="panel-divider"></mat-divider>
+
+        <!-- Lift statuses -->
+        <div class="detail-section" *ngIf="detailLifts.length">
+          <div class="detail-section__title">
+            <mat-icon>elevator</mat-icon>
+            Lifts
+          </div>
+          <div class="detail-status-row" *ngFor="let lift of detailLifts">
+            <span class="status-dot" [class.status-dot--open]="lift.isOpen"></span>
+            <span class="status-name">{{ lift.name }}</span>
+            <span class="status-badge" [class.status-badge--open]="lift.isOpen">
+              {{ lift.isOpen ? 'Open' : 'Closed' }}
+            </span>
+          </div>
+        </div>
+
+        <mat-divider class="panel-divider" *ngIf="detailLifts.length && detailRuns.length"></mat-divider>
+
+        <!-- Run statuses -->
+        <div class="detail-section" *ngIf="detailRuns.length">
+          <div class="detail-section__title">
+            <mat-icon>downhill_skiing</mat-icon>
+            Runs
+          </div>
+          <div class="detail-status-row" *ngFor="let run of detailRuns">
+            <span class="status-dot" [class.status-dot--open]="run.isOpen"></span>
+            <span class="status-name">{{ run.name }}</span>
+            <span class="status-badge" [class.status-badge--open]="run.isOpen">
+              {{ run.isOpen ? 'Open' : 'Closed' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="detail-section detail-no-data"
+          *ngIf="!detailLifts.length && !detailRuns.length">
+          <mat-icon>info_outline</mat-icon>
+          <span>No lift or run data yet</span>
+        </div>
+
+      </div>
+
+      <ng-template #detailState>
+        <div class="panel-state" *ngIf="detailLoading">
+          <mat-progress-spinner mode="indeterminate" diameter="32"></mat-progress-spinner>
+          <p>Loading conditions…</p>
+        </div>
+        <div class="panel-state panel-state--error" *ngIf="!detailLoading && detailError">
+          <mat-icon>error_outline</mat-icon>
+          <p>{{ detailError }}</p>
+          <button mat-stroked-button (click)="backToList()">Back to list</button>
+        </div>
+      </ng-template>
+    </ng-container>
+
+  </div>
+</div>

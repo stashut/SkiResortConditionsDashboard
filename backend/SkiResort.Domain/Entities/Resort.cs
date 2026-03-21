@@ -9,4 +9,9 @@ public class Resort
     public string Country { get; set; } = string.Empty;
     public int ElevationBaseMeters { get; set; }
     public int ElevationTopMeters { get; set; }
+
+    // Used by WeatherSyncWorker to fetch real snow data from Open-Meteo.
+    // Null means no live weather sync for this resort.
+    public double? LatitudeDeg { get; set; }
+    public double? LongitudeDeg { get; set; }
 }

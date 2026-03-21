@@ -1,5 +1,7 @@
 .shell {
   height: 100vh;
+  overflow: hidden; // prevent AM from leaking horizontal scroll
+  max-width: 100vw;
 }
 
 .shell-sidenav {
@@ -21,16 +23,23 @@
 }
 
 .shell-content {
-  height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: hidden; // clip any child overflow at this level
+}
+
+.shell-toolbar--top {
+  position: sticky;
+  top: 0;
+  z-index: 1001; // Leaflet controls reach z-index 1000; stay above them
 }
 
 .shell-main {
-  padding: 1rem;
   flex: 1;
-  overflow: auto;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
 }
 
 .shell-menu-button {
@@ -57,4 +66,32 @@
 
 .logo {
   font-weight: 600;
+}
+
+// Force sidenav icon/text colour regardless of Material MDC variable cascade
+::ng-deep .mat-sidenav .mdc-list-item__start { color: inherit !important; }
+::ng-deep .mat-sidenav .mat-mdc-list-item .mat-icon { color: inherit !important; }
+
+html[data-theme="dark"] ::ng-deep .mat-sidenav .mat-mdc-list-item {
+  --mdc-list-list-item-leading-icon-color: #e2e8f0;
+  --mdc-list-list-item-label-text-color: #e2e8f0;
+  color: #e2e8f0;
+}
+
+html[data-theme="dark"] ::ng-deep .mat-sidenav .mat-mdc-list-item.active {
+  --mdc-list-list-item-leading-icon-color: #67e8f9;
+  --mdc-list-list-item-label-text-color: #67e8f9;
+  color: #67e8f9;
+}
+
+html[data-theme="light"] ::ng-deep .mat-sidenav .mat-mdc-list-item {
+  --mdc-list-list-item-leading-icon-color: #6b7280;
+  --mdc-list-list-item-label-text-color: #374151;
+  color: #374151;
+}
+
+html[data-theme="light"] ::ng-deep .mat-sidenav .mat-mdc-list-item.active {
+  --mdc-list-list-item-leading-icon-color: #3f51b5;
+  --mdc-list-list-item-label-text-color: #3f51b5;
+  color: #3f51b5;
 }

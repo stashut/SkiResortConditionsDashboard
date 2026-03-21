@@ -9,14 +9,28 @@ public sealed record ResortDto(
     string Region,
     string Country,
     int ElevationBaseMeters,
-    int ElevationTopMeters);
+    int ElevationTopMeters,
+    double? LatitudeDeg,
+    double? LongitudeDeg);
 
 public sealed record SnowConditionDto(
     Guid Id,
     Guid ResortId,
     DateTimeOffset ObservedAt,
     decimal SnowDepthCm,
-    decimal NewSnowCm);
+    decimal NewSnowCm,
+    decimal? TemperatureCelsius,
+    decimal? ApparentTemperatureCelsius,
+    decimal? RelativeHumidityPercent,
+    decimal? PrecipitationMm,
+    decimal? RainMm,
+    int? WeatherCode,
+    decimal? CloudCoverPercent,
+    decimal? WindSpeedKmh,
+    int? WindDirectionDeg,
+    decimal? WindGustsKmh,
+    int? VisibilityMeters,
+    decimal? SurfacePressureHpa);
 
 public sealed record LiftStatusDto(
     Guid Id,
@@ -46,4 +60,3 @@ public sealed class ResortConditionsResponse
     public IReadOnlyList<LiftStatusDto> CurrentLiftStatuses { get; init; } = Array.Empty<LiftStatusDto>();
     public RunStatusPageDto RunStatusPage { get; init; } = new();
 }
-

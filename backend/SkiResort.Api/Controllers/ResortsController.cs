@@ -41,7 +41,9 @@ public class ResortsController : ControllerBase
                 r.Region,
                 r.Country,
                 r.ElevationBaseMeters,
-                r.ElevationTopMeters))
+                r.ElevationTopMeters,
+                r.LatitudeDeg,
+                r.LongitudeDeg))
             .ToListAsync(cancellationToken);
 
         return Ok(resorts);
@@ -78,7 +80,9 @@ public class ResortsController : ControllerBase
             resort.Region,
             resort.Country,
             resort.ElevationBaseMeters,
-            resort.ElevationTopMeters);
+            resort.ElevationTopMeters,
+            resort.LatitudeDeg,
+            resort.LongitudeDeg);
 
         var latestSnow = await _dbContext.SnowConditions
             .AsNoTracking()
@@ -88,12 +92,7 @@ public class ResortsController : ControllerBase
 
         SnowConditionDto? latestSnowDto = latestSnow is null
             ? null
-            : new SnowConditionDto(
-                latestSnow.Id,
-                latestSnow.ResortId,
-                latestSnow.ObservedAt,
-                latestSnow.SnowDepthCm,
-                latestSnow.NewSnowCm);
+            : MapSnowCondition(latestSnow);
 
         var liftSnapshots = await _dbContext.LiftStatuses
             .AsNoTracking()
@@ -192,13 +191,28 @@ public class ResortsController : ControllerBase
 
         await foreach (var condition in query)
         {
-            yield return new SnowConditionDto(
-                condition.Id,
-                condition.ResortId,
-                condition.ObservedAt,
-                condition.SnowDepthCm,
-                condition.NewSnowCm);
+            yield return MapSnowCondition(condition);
         }
     }
+
+    private static SnowConditionDto MapSnowCondition(SnowCondition c) =>
+        new(
+            c.Id,
+            c.ResortId,
+            c.ObservedAt,
+            c.SnowDepthCm,
+            c.NewSnowCm,
+            c.TemperatureCelsius,
+            c.ApparentTemperatureCelsius,
+            c.RelativeHumidityPercent,
+            c.PrecipitationMm,
+            c.RainMm,
+            c.WeatherCode,
+            c.CloudCoverPercent,
+            c.WindSpeedKmh,
+            c.WindDirectionDeg,
+            c.WindGustsKmh,
+            c.VisibilityMeters,
+            c.SurfacePressureHpa);
 }
 

@@ -5,6 +5,8 @@ export interface Resort {
   country?: string;
   elevationBaseMeters?: number;
   elevationTopMeters?: number;
+  latitudeDeg?: number;
+  longitudeDeg?: number;
 }
 
 export interface SnowComparisonRow {

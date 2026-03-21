@@ -70,14 +70,14 @@
           <ng-container matColumnDef="snowDepth">
             <th mat-header-cell *matHeaderCellDef>Base depth</th>
             <td mat-cell *matCellDef="let row">
-              {{ row.snowDepthCm }} cm
+              {{ units.formatSnowCm(row.snowDepthCm) }}
             </td>
           </ng-container>
 
           <ng-container matColumnDef="newSnow">
             <th mat-header-cell *matHeaderCellDef>New snow</th>
             <td mat-cell *matCellDef="let row">
-              {{ row.newSnowCm }} cm
+              {{ units.formatSnowCm(row.newSnowCm) }}
             </td>
           </ng-container>
 

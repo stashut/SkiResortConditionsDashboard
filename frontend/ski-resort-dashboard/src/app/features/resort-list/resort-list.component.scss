@@ -1,71 +1,539 @@
-.resort-list {
+// ── Host fills shell-main via position absolute ───────────────────────────────
+
+:host {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+}
+
+// ── Two-panel layout ──────────────────────────────────────────────────────────
+
+.resort-layout {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+// ── Map panel (70%) ───────────────────────────────────────────────────────────
+
+.resort-map-panel {
+  flex: 0 0 70%;
+  position: relative;
+  height: 100%;
+  min-width: 0;
+}
+
+.resort-map-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+// ── Right panel (remaining space) ────────────────────────────────────────────
+
+.resort-table-panel {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  background: #020617;
+  border-left: 1px solid rgba(148, 163, 184, 0.12);
+  overflow: hidden;
+  color: #e2e8f0;
 }
 
-.resort-list__card {
-  background: rgba(2, 6, 23, 0.35);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  backdrop-filter: blur(10px);
-}
+// ── Panel header ──────────────────────────────────────────────────────────────
 
-.resort-list__icon {
-  background: rgba(34, 211, 238, 0.12);
-  border-radius: 999px;
-  color: #67e8f9;
+.panel-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  flex-shrink: 0;
+  background: rgba(15, 23, 42, 0.9);
+
+  &--detail {
+    gap: 0.5rem;
+    align-items: center;
+
+    .panel-header__title {
+      flex: 1;
+      min-width: 0;
+      line-height: 1.25;
+      display: flex;
+      align-items: center;
+      min-height: 40px;
+    }
+  }
+
+  &__icon {
+    color: #67e8f9;
+    font-size: 1.4rem;
+    width: 1.4rem;
+    height: 1.4rem;
+    flex-shrink: 0;
+  }
+
+  &__title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__sub {
+    font-size: 0.72rem;
+    color: rgba(148, 163, 184, 0.6);
+    margin-top: 1px;
+  }
 }
 
-.resort-list__header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
+.btn-back {
+  color: #f1f5f9 !important;
+  flex-shrink: 0;
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+
+  mat-icon,
+  .mat-icon {
+    margin: 0 !important;
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 22px !important;
+    line-height: 22px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    // Arrow glyphs sit slightly low in the font box — nudge up to match title cap height
+    transform: translateY(-1px);
+  }
 }
 
-.resort-list__subtitle {
-  margin: 0.25rem 0 0;
-  opacity: 0.75;
+// MDC icon-button inner wrapper — keeps glyph optically centered with title text
+::ng-deep .panel-header--detail .btn-back.mat-mdc-icon-button {
+  .mat-mdc-button-touch-target {
+    width: 40px;
+    height: 40px;
+  }
+
+  .mat-mdc-button-persistent-ripple,
+  .mdc-icon-button__ripple {
+    border-radius: 50%;
+  }
 }
 
-.resort-list__content {
-  overflow: auto;
+// ── Scrollable area ───────────────────────────────────────────────────────────
+
+.panel-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  // Hide scrollbar so it never steals content width; scroll via mousewheel/trackpad
+  scrollbar-width: none; // Firefox
+  &::-webkit-scrollbar { display: none; } // Chrome/Edge
 }
+
+// ── Resort list table ─────────────────────────────────────────────────────────
 
 table {
   width: 100%;
-  min-width: 640px;
+  table-layout: fixed;
+  background: transparent !important;
 }
 
-.resort-list__name {
+// Override Material table dark mode
+::ng-deep .resort-table-panel {
+  .mat-mdc-header-row {
+    background: rgba(15, 23, 42, 0.95) !important;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+
+  .mat-mdc-header-cell {
+    color: rgba(148, 163, 184, 0.7) !important;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom-color: rgba(148, 163, 184, 0.1) !important;
+    padding: 0 4px 0 12px !important;
+    overflow: hidden;
+  }
+
+  .mat-mdc-row {
+    background: transparent !important;
+
+    &:hover {
+      background: rgba(34, 211, 238, 0.06) !important;
+    }
+  }
+
+  .mat-mdc-cell {
+    border-bottom-color: rgba(148, 163, 184, 0.07) !important;
+    color: #e2e8f0;
+    overflow: hidden;
+  }
+}
+
+.resort-row { cursor: pointer; }
+
+.cell-name {
+  padding: 8px 4px 8px 12px !important;
+  overflow: hidden;
+}
+
+.resort-name {
+  font-size: 0.82rem;
   font-weight: 500;
+  color: #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.resort-list__badge {
-  margin-left: 0.5rem;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
+.resort-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.resort-list__badge--live {
-  background: rgba(56, 189, 248, 0.15);
-  color: #22d3ee;
+.resort-region {
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.6);
 }
 
-.resort-list__state {
+.resort-elev {
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.badge-live {
+  font-size: 0.65rem;
+  color: #34d399;
+  font-weight: 600;
+}
+
+.cell-actions {
+  padding: 0 4px 0 0 !important;
+  white-space: nowrap;
+  width: 56px;
+  text-align: right;
+  overflow: visible !important;
+}
+
+.btn-fav, .btn-detail {
+  width: 26px !important;
+  height: 26px !important;
+  line-height: 26px !important;
+  padding: 0 !important;
+
+  mat-icon {
+    font-size: 16px !important;
+    width: 16px !important;
+    height: 16px !important;
+  }
+}
+
+.btn-fav { color: rgba(148, 163, 184, 0.6) !important; }
+
+.btn-fav--header {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.btn-detail { color: #67e8f9 !important; }
+
+// ── States ────────────────────────────────────────────────────────────────────
+
+.panel-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  padding: 3rem 0;
+  gap: 0.75rem;
+  padding: 3rem 1rem;
+  color: rgba(148, 163, 184, 0.6);
+  flex: 1;
 }
 
-.resort-list__state--error {
-  color: #fecaca;
+.panel-state--error { color: #fca5a5; }
+
+// ── Detail panel ──────────────────────────────────────────────────────────────
+
+.panel-divider {
+  border-top-color: rgba(148, 163, 184, 0.1) !important;
+  margin: 0 !important;
 }
 
+.detail-section {
+  padding: 0.75rem 0.75rem;
+}
+
+.detail-section__title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(148, 163, 184, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.75rem;
+
+  mat-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    color: #67e8f9;
+  }
+}
+
+.detail-label {
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.detail-value {
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  margin-top: 2px;
+}
+
+.detail-country {
+  color: rgba(148, 163, 184, 0.65);
+}
+
+.detail-elev {
+  color: #f1f5f9;
+  font-weight: 500;
+}
+
+.detail-sub {
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.5);
+  margin-bottom: 0.75rem;
+}
+
+.detail-snow-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.detail-snow-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.detail-big-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-top: 4px;
+
+  .unit {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: rgba(148, 163, 184, 0.6);
+  }
+}
+
+.detail-weather-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.detail-weather-cell {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  min-width: 0;
+
+  &--wide {
+    grid-column: 1 / -1;
+  }
+}
+
+.detail-weather-value {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin-top: 2px;
+  line-height: 1.25;
+  word-break: break-word;
+
+  &--sm { font-size: 0.72rem; font-weight: 500; }
+}
+
+.detail-weather-code {
+  display: inline-block;
+  margin-right: 0.35rem;
+  padding: 0 0.25rem;
+  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.15);
+  font-size: 0.65rem;
+  color: rgba(148, 163, 184, 0.85);
+  vertical-align: middle;
+}
+
+.detail-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+
+  &:last-child { border-bottom: none; }
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.3);
+  flex-shrink: 0;
+
+  &--open { background: #34d399; box-shadow: 0 0 4px rgba(52, 211, 153, 0.7); }
+}
+
+.status-name {
+  flex: 1;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.status-badge {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.1);
+  color: rgba(148, 163, 184, 0.6);
+  white-space: nowrap;
+
+  &--open {
+    background: rgba(52, 211, 153, 0.12);
+    color: #34d399;
+  }
+}
+
+.detail-no-data {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(148, 163, 184, 0.4);
+  font-size: 0.8rem;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// ── Leaflet overrides ─────────────────────────────────────────────────────────
+
+::ng-deep {
+  .leaflet-container {
+    background: #0a0f1e !important;
+  }
+
+  .leaflet-control-attribution {
+    background: rgba(0, 0, 0, 0.35) !important;
+    color: rgba(148, 163, 184, 0.35) !important;
+    font-size: 9px !important;
+    padding: 1px 4px !important;
+    backdrop-filter: none;
+
+    a { color: rgba(148, 163, 184, 0.4) !important; }
+    svg { display: none; }
+  }
+
+  .resort-marker {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #22d3ee;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 0 6px rgba(34, 211, 238, 0.7);
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+
+    &:hover { transform: scale(1.5); box-shadow: 0 0 12px rgba(34, 211, 238, 1); }
+    &.resort-marker--live { background: #34d399; box-shadow: 0 0 8px rgba(52, 211, 153, 0.9); }
+    &.resort-marker--highlight {
+      background: #f59e0b;
+      box-shadow: 0 0 14px rgba(245, 158, 11, 1);
+      transform: scale(1.6);
+    }
+  }
+
+  .resort-popup-wrapper {
+    .leaflet-popup-content-wrapper {
+      background: #0f172a;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 10px;
+      color: #e2e8f0;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      padding: 0;
+    }
+    .leaflet-popup-content { margin: 0; }
+    .leaflet-popup-tip { background: #0f172a; }
+    .leaflet-popup-close-button { color: rgba(148, 163, 184, 0.5) !important; }
+
+    .resort-popup {
+      padding: 14px 16px;
+
+      .rp-name { font-weight: 600; font-size: 0.92rem; color: #f1f5f9; margin-bottom: 3px; }
+      .rp-region { font-size: 0.75rem; color: rgba(148, 163, 184, 0.75); margin-bottom: 8px; }
+      .rp-elev { font-size: 0.75rem; color: #e2e8f0; margin-bottom: 12px; }
+
+      .rp-btn {
+        display: block;
+        width: 100%;
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        color: #f1f5f9;
+        font-size: 0.8rem;
+        cursor: pointer;
+        text-align: center;
+        transition: background 0.15s;
+
+        &:hover { background: rgba(255, 255, 255, 0.15); }
+      }
+    }
+  }
+}

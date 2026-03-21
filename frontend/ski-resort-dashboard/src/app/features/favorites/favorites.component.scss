@@ -1,3 +1,13 @@
+:host {
+  display: block;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1rem;
+  overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
+}
+
 .favorites {
   display: flex;
   flex-direction: column;
@@ -9,22 +19,40 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
+
+  h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #f1f5f9;
+  }
 }
 
 .favorites__subtitle {
-  margin: 0.25rem 0 0;
-  opacity: 0.75;
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  color: rgba(148, 163, 184, 0.65);
 }
 
 .favorites__empty {
-  opacity: 0.85;
+  font-size: 0.9rem;
+  color: rgba(148, 163, 184, 0.65);
+
+  a {
+    color: #67e8f9;
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
+  }
 }
 
 .favorites__badge {
   margin-left: 0.5rem;
   padding: 0.1rem 0.5rem;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  vertical-align: middle;
 }
 
 .favorites__badge--live {
@@ -39,9 +67,26 @@
   justify-content: center;
   gap: 1rem;
   padding: 3rem 0;
+  color: rgba(148, 163, 184, 0.6);
 }
 
 .favorites__state--error {
-  color: #fecaca;
+  color: #fca5a5;
 }
 
+// Light theme: headings were tuned for dark backgrounds
+:host-context(html[data-theme="light"]) {
+  .favorites__header h1 {
+    color: #0f172a;
+  }
+
+  .favorites__subtitle,
+  .favorites__empty,
+  .favorites__state {
+    color: rgba(71, 85, 105, 0.85);
+  }
+
+  .favorites__empty a {
+    color: #0e7490;
+  }
+}

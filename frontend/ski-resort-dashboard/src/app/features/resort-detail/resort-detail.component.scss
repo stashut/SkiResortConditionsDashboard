@@ -18,6 +18,31 @@
   height: fit-content;
 }
 
+.detail__card-header {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.detail__card-header-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.detail__fav-btn {
+  flex-shrink: 0;
+  margin-top: -0.25rem;
+  color: rgba(148, 163, 184, 0.65);
+
+  &--on mat-icon {
+    color: #f472b6;
+  }
+}
+
 .detail__overview,
 .detail__latest-grid {
   display: grid;
@@ -35,6 +60,39 @@
 .detail__metric-value {
   font-size: 1.1rem;
   font-weight: 500;
+
+  &--sm {
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+}
+
+.detail__weather-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.detail__weather-cell {
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.02);
+
+  &--wide {
+    grid-column: 1 / -1;
+  }
+}
+
+.detail__weather-code {
+  display: inline-block;
+  margin-right: 0.35rem;
+  padding: 0 0.3rem;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.06);
+  font-size: 0.75rem;
+  vertical-align: middle;
 }
 
 .detail__notes {
