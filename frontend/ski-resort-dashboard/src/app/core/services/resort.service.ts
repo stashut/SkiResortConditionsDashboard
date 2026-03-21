@@ -3,22 +3,22 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Resort, SnowComparisonRow } from '../models/resort.model';
 import { ResortConditionsResponse } from '../models/condition.model';
-
-const API_BASE_URL = '/api';
+import { APP_API_BASE_URL } from '../tokens/app-config.token';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ResortService {
   private readonly http = inject(HttpClient);
+  private readonly base = inject(APP_API_BASE_URL);
 
   getResorts(): Observable<Resort[]> {
-    return this.http.get<Resort[]>(`${API_BASE_URL}/resorts`);
+    return this.http.get<Resort[]>(`${this.base}/api/resorts`);
   }
 
   getResortConditions(id: string): Observable<ResortConditionsResponse> {
     return this.http.get<ResortConditionsResponse>(
-      `${API_BASE_URL}/resorts/${id}/conditions`
+      `${this.base}/api/resorts/${id}/conditions`
     );
   }
 
@@ -31,7 +31,7 @@ export class ResortService {
     }
 
     return this.http.get<SnowComparisonRow[]>(
-      `${API_BASE_URL}/reports/snow-comparison`,
+      `${this.base}/api/reports/snow-comparison`,
       { params }
     );
   }
