@@ -7,59 +7,84 @@ This document describes the AWS services used in the **SkiResortConditionsDashbo
 ```
 Browser / Angular SPA
         |
-        | HTTPS
-        v
- API Gateway HTTP API          (ski-resort-api)
-   ANY /api/{proxy+}
-   GET /
-        |
-        | HTTP → ALB DNS
-        v
- Application Load Balancer     (ski-resort-alb)
-   Listener: HTTP :80
-   Target group: ski-resort-api-tg (IP, port 8080)
-        |
-        | port 8080
-        v
- ECS Fargate Service           (ski-resort-cluster / ski-resort-api-service)
- ┌─────────────────────────────────────────────────────┐
- │  Task: ski-resort-api (Fargate, awsvpc, Linux/x64)  │
- │                                                     │
- │  Container 1: ski-resort-api          (port 8080)   │
- │    .NET 8 ASP.NET Core API                          │
- │    – REST endpoints                                 │
- │    – SignalR hub                                    │
- │    – SQS ingestion worker                           │
- │    – Emits OTLP → 127.0.0.1:4317                   │
- │                                                     │
- │  Container 2: adot-collector          (port 4317)   │
- │    AWS Distro for OpenTelemetry                     │
- │    – Receives OTLP from API container               │
- │    – Forwards traces/metrics → CloudWatch           │
- └─────────────────────────────────────────────────────┘
-        |              |              |
-        | port 5432    | AWS SDK      | AWS SDK
-        v              v              v
-   RDS PostgreSQL   DynamoDB       SQS Queue
-   ski-resort-db    SkiResort      ski-resort-
-                    UserFavorites  weather-ingestion
+        | HTTPS (page load)          HTTPS (API calls)
+        v                                    |
+ CloudFront CDN                              v
+   dnjatcqx268s0.cloudfront.net    API Gateway HTTP API     (ski-resort-api)
+   OAC → private S3 bucket           ANY /api/{proxy+}
+   SPA fallback: 403/404→index.html  GET /
+        |                                    |
+        | S3 GetObject (OAC)                 | HTTP → ALB DNS
+        v                                    | (overwrite:path=$request.path)
+ S3 Bucket                                  v
+   ski-resort-dashboard-frontend   Application Load Balancer (ski-resort-alb)
+   index.html (no-cache)             Listener: HTTP :80
+   *.js / *.css (1yr cache)          Target group: ski-resort-api-tg (IP, :8080)
+                                             |
+                                             | port 8080
+                                             v
+                              ECS Fargate Service  (ski-resort-cluster)
+                              ┌──────────────────────────────────────────────┐
+                              │  Task: ski-resort-api (Fargate, awsvpc)      │
+                              │                                              │
+                              │  Container 1: ski-resort-api   (port 8080)  │
+                              │    .NET 8 ASP.NET Core API                  │
+                              │    – REST endpoints                          │
+                              │    – SignalR hub                             │
+                              │    – SQS ingestion worker                    │
+                              │    – Emits OTLP → 127.0.0.1:4317            │
+                              │                                              │
+                              │  Container 2: adot-collector   (port 4317)  │
+                              │    AWS Distro for OpenTelemetry              │
+                              │    – Receives OTLP from API container        │
+                              │    – Forwards traces/metrics → CloudWatch    │
+                              └──────────────────────────────────────────────┘
+                                       |              |              |
+                                       | port 5432    | AWS SDK      | AWS SDK
+                                       v              v              v
+                                  RDS PostgreSQL   DynamoDB       SQS Queue
+                                  ski-resort-db    SkiResort      ski-resort-
+                                                   UserFavorites  weather-ingestion
 ```
 
 ---
 
 ## Services and Their Roles
 
-### 1. API Gateway HTTP API
-- **Name:** `ski-resort-api`
-- **Purpose:** Public HTTPS entry point that routes browser and client requests to the backend.
-- **Routes:**
-  - `ANY /api/{proxy+}` → forwards all API traffic to the ALB
-  - `GET /` → health/root check
-- **Why:** Provides a managed HTTPS endpoint with a stable invoke URL, without needing to manage SSL termination on the ALB directly for development.
+### 1. CloudFront CDN
+- **Distribution:** `E7RT8Z8CIZJ5J`
+- **Domain:** `https://dnjatcqx268s0.cloudfront.net`
+- **Origin:** S3 bucket `ski-resort-dashboard-frontend` via Origin Access Control (OAC) — bucket is fully private
+- **Purpose:** Serves the Angular SPA globally from edge locations. Handles HTTPS termination, HTTP/2, and compression. Acts as the public URL for the frontend.
+- **SPA routing:** Custom error responses map both 403 and 404 → `/index.html` with HTTP 200, so Angular client-side routes (e.g. `/resorts`, `/favorites`) work on direct access or page refresh.
+- **Cache strategy:**
+  - Hashed JS/CSS chunks (`chunk-*.js`, `styles-*.css`) → `Cache-Control: public, max-age=31536000, immutable` (1 year)
+  - `index.html` → `Cache-Control: no-cache, no-store, must-revalidate` (always fresh)
+- **Price class:** `PriceClass_100` (US, EU, Asia) — free tier eligible
 
 ---
 
-### 2. Application Load Balancer (ALB)
+### 2. S3 Bucket
+- **Bucket:** `ski-resort-dashboard-frontend`
+- **Public access:** Fully blocked. Only CloudFront can read objects via OAC (`sigv4` signing).
+- **Contents:** Output of `ng build --configuration production` (`dist/ski-resort-dashboard/browser/`)
+- **Purpose:** Durable, low-cost static file store for the Angular build artifacts.
+- **Redeployment:** `aws s3 sync` + `aws cloudfront create-invalidation --paths "/*"`
+
+---
+
+### 3. API Gateway HTTP API
+- **Name:** `ski-resort-api`
+- **Invoke URL:** `https://dl1iycu1qh.execute-api.us-east-1.amazonaws.com`
+- **Purpose:** Public HTTPS entry point that routes browser API calls to the backend.
+- **Routes:**
+  - `ANY /api/{proxy+}` → forwards all API traffic to the ALB. Integration uses `overwrite:path=$request.path` to preserve the full original path.
+  - `GET /` → health/root check
+- **CORS:** Configured at the API Gateway level — `AllowOrigins` includes the CloudFront domain and localhost dev origins. `AllowCredentials: false` (no cookies/auth yet).
+
+---
+
+### 4. Application Load Balancer (ALB)
 - **Name:** `ski-resort-alb`
 - **Scheme:** Internet-facing
 - **Listener:** HTTP :80 → forwards to target group `ski-resort-api-tg`
@@ -69,9 +94,9 @@ Browser / Angular SPA
 
 ---
 
-### 3. ECS Fargate
+### 5. ECS Fargate
 - **Cluster:** `ski-resort-cluster`
-- **Service:** `ski-resort-api-service` (Replica, desired tasks: 1)
+- **Service:** `ski-resort-api-service-ipavsbd1` (Replica, desired tasks: 1)
 - **Task definition:** `ski-resort-api` (family), `awsvpc` network mode
 - **Purpose:** Runs the containerized .NET API without managing EC2 instances. ECS handles task placement, health monitoring, restarts, and deployment.
 - **Security group (`ski-ecs-tasks-sg`):** inbound port 8080 from `ski-alb-sg` only; outbound HTTPS 443 (for Secrets Manager, ECR, CloudWatch) and PostgreSQL 5432 to RDS.
@@ -84,6 +109,7 @@ Browser / Angular SPA
   - SignalR hub (`/hubs/resort-conditions`) for real-time updates
   - SQS background worker polling `ski-resort-weather-ingestion`
 - Key env vars: `ConnectionStrings__Postgres`, `SqsIngestion__QueueUrl`, `AWS__Region`, `ASPNETCORE_ENVIRONMENT=Production`
+- **CORS:** `app.UseCors()` middleware with `SetIsOriginAllowed(_ => true)` + `AllowCredentials()` — required for browser preflight requests and SignalR WebSocket negotiation
 - Logs to CloudWatch log group `/ecs/ski-resort-api`
 
 #### Container 2 — `adot-collector`
@@ -95,14 +121,14 @@ Browser / Angular SPA
 
 ---
 
-### 4. Amazon ECR
+### 6. Amazon ECR
 - **Repository:** `ski-resort-api`
 - **Purpose:** Stores the Docker image for the .NET API. ECS pulls the image from ECR when starting tasks.
 - The `ecsTaskExecutionRole` grants ECS permission to pull from ECR.
 
 ---
 
-### 5. RDS PostgreSQL
+### 7. RDS PostgreSQL
 - **Identifier:** `ski-resort-db`
 - **Engine:** PostgreSQL 17
 - **Instance:** `db.t4g.micro` (burstable, 1 GiB RAM)
@@ -116,7 +142,7 @@ Browser / Angular SPA
 
 ---
 
-### 6. DynamoDB
+### 8. DynamoDB
 - **Table:** `SkiResortUserFavorites`
 - **Keys:** Partition key `UserId` (String), Sort key `ResortId` (String)
 - **Capacity:** On-demand
@@ -126,7 +152,7 @@ Browser / Angular SPA
 
 ---
 
-### 7. SQS
+### 9. SQS
 - **Queue:** `ski-resort-weather-ingestion`
 - **Type:** Standard (at-least-once delivery)
 - **Purpose:** Decouples weather/snow data ingestion from the API. External producers (weather data jobs) publish messages to the queue; the `SqsIngestionWorker` background service inside the API container polls and processes them, persisting new `SnowCondition` records to RDS and notifying connected clients via SignalR.
@@ -134,7 +160,7 @@ Browser / Angular SPA
 
 ---
 
-### 8. AWS Secrets Manager
+### 10. AWS Secrets Manager
 - **Secret:** `ski-resort/rds-password`
 - **Purpose:** Stores the RDS master password (full connection string as a key/value pair). The ECS task definition references the secret ARN so the plain password is never stored in the task definition JSON or environment variables in plain text.
 - **IAM:** `ecsTaskExecutionRole` has `secretsmanager:GetSecretValue` permission on this secret. The secret is fetched by the ECS agent **before** the container starts.
@@ -142,7 +168,7 @@ Browser / Angular SPA
 
 ---
 
-### 9. CloudWatch
+### 11. CloudWatch
 - **Log groups:**
   - `/ecs/ski-resort-api` — application logs from the .NET API container
   - `/ecs/ski-resort-api-adot` — logs from the ADOT collector sidecar
@@ -151,7 +177,7 @@ Browser / Angular SPA
 
 ---
 
-### 10. IAM Roles
+### 12. IAM Roles
 
 | Role | Used by | Key permissions |
 |------|---------|-----------------|
@@ -160,7 +186,7 @@ Browser / Angular SPA
 
 ---
 
-### 11. VPC and Networking
+### 13. VPC and Networking
 
 All resources share the same VPC (`vpc-0e75344a056ebc488`, `172.30.0.0/16`).
 
@@ -182,9 +208,14 @@ Internet → ski-alb-sg (80/443) → ski-ecs-tasks-sg (8080) → ski-rds-sg (543
 
 ## Data Flow Summary
 
-### Normal API request
+### Page load (Angular SPA)
 ```
-Browser → API Gateway → ALB → ECS task (port 8080) → RDS PostgreSQL
+Browser → CloudFront (edge cache) → S3 bucket → index.html + JS/CSS chunks
+```
+
+### API request
+```
+Browser → API Gateway (CORS check) → ALB → ECS task (port 8080) → RDS PostgreSQL
 ```
 
 ### Real-time update
@@ -194,10 +225,15 @@ SQS message → SqsIngestionWorker → ECS task → RDS (persist) → SignalR hu
 
 ### Favorites
 ```
-Browser → API → ECS task → DynamoDB (SkiResortUserFavorites)
+Browser → API Gateway → ALB → ECS task → DynamoDB (SkiResortUserFavorites)
 ```
 
 ### Observability
 ```
 ECS task → OTLP (127.0.0.1:4317) → adot-collector → CloudWatch Logs/Metrics/Traces
+```
+
+### Frontend redeployment
+```
+ng build → aws s3 sync → aws cloudfront create-invalidation
 ```
