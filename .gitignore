@@ -57,3 +57,6 @@ appsettings.*.Local.json
 # --- Docker / tooling ---
 docker-compose.override.yml
 
+# --- AWS certificates ---
+global-bundle.pem
+
