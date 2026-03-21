@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {
   HubConnection,
   HubConnectionBuilder,
@@ -6,6 +6,7 @@ import {
   LogLevel
 } from '@microsoft/signalr';
 import { Subject } from 'rxjs';
+import { APP_API_BASE_URL } from '../tokens/app-config.token';
 
 export interface ResortConditionsUpdatedEvent {
   resortId: string;
@@ -16,6 +17,7 @@ export interface ResortConditionsUpdatedEvent {
   providedIn: 'root'
 })
 export class SignalrResortUpdatesService {
+  private readonly hubUrl = `${inject(APP_API_BASE_URL)}/hubs/resort-conditions`;
   private hub?: HubConnection;
   private readonly updatesSubject = new Subject<ResortConditionsUpdatedEvent>();
   private readonly desiredResortSubscriptions = new Set<string>();
@@ -34,7 +36,7 @@ export class SignalrResortUpdatesService {
 
     if (!this.hub) {
       this.hub = new HubConnectionBuilder()
-        .withUrl('/hubs/resort-conditions')
+        .withUrl(this.hubUrl)
         .withAutomaticReconnect()
         .configureLogging(LogLevel.Information)
         .build();

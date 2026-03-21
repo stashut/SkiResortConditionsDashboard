@@ -97,10 +97,23 @@ builder.Services.AddOpenTelemetry()
             .AddOtlpExporter();
     });
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy
+            .SetIsOriginAllowed(_ => true)   // any origin; tighten once a stable domain is set
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials();             // required for SignalR WebSocket negotiation
+    });
+});
+
 builder.Services.AddControllers();
 
 var app = builder.Build();
 
+app.UseCors();
 app.UseSession();
 
 // Dev-only: create schema + seed sample data if the DB is empty.
