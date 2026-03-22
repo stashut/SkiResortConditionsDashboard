@@ -1,5 +1,5 @@
 @startuml component-architecture
-!theme plain
+!include plantuml-dark.inc.puml
 title Ski Resort Conditions Dashboard — cloud and application components
 
 skinparam componentStyle rectangle

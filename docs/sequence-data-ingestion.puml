@@ -1,5 +1,5 @@
 @startuml sequence-data-ingestion
-!theme plain
+!include plantuml-dark.inc.puml
 title Ski Resort Conditions Dashboard — data ingestion and real-time fan-out
 
 skinparam sequenceMessageAlign center

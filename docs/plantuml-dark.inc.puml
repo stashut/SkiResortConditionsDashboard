@@ -1,0 +1,105 @@
+' Shared dark theme (~#121212 bg, light text) for sequence & component diagrams.
+' Include after @startuml in each diagram: !include plantuml-dark.inc.puml
+
+skinparam shadowing false
+skinparam backgroundColor #121212
+skinparam defaultFontColor #EEEEEE
+skinparam defaultFontName Verdana
+skinparam hyperlinkColor #6BB3FF
+skinparam ArrowColor #B8B8B8
+skinparam ArrowThickness 1
+skinparam roundcorner 0
+
+skinparam title {
+  FontColor #FFFFFF
+  FontSize 16
+}
+
+skinparam legend {
+  BackgroundColor #1E1E1E
+  BorderColor #5A5A5A
+  FontColor #DDDDDD
+}
+
+skinparam note {
+  BackgroundColor #2A2A2A
+  BorderColor #6A6A6A
+  FontColor #DDDDDD
+}
+
+skinparam sequence {
+  ArrowColor #C8C8C8
+  ArrowFontColor #E0E0E0
+  LifeLineBackgroundColor #1E1E1E
+  LifeLineBorderColor #5A5A5A
+  ParticipantBackgroundColor #252526
+  ParticipantBorderColor #7A7A7A
+  ParticipantFontColor #EEEEEE
+  ActorBackgroundColor #252526
+  ActorBorderColor #7A7A7A
+  ActorFontColor #EEEEEE
+  DatabaseBackgroundColor #252526
+  DatabaseBorderColor #7A7A7A
+  DatabaseFontColor #EEEEEE
+  BoxBackgroundColor #1A1A1A
+  BoxBorderColor #5A5A5A
+  BoxFontColor #CCCCCC
+  DividerBackgroundColor #2D2D2D
+  DividerBorderColor #5A5A5A
+  DividerFontColor #CCCCCC
+  GroupBackgroundColor #252526
+  GroupBorderColor #5A5A5A
+  GroupFontColor #DDDDDD
+  GroupHeaderFontColor #FFFFFF
+  SequenceNumberBackgroundColor #3A3A3A
+  SequenceNumberBorderColor #7A7A7A
+  SequenceNumberFontColor #FFFFFF
+}
+
+skinparam component {
+  BackgroundColor #252526
+  BorderColor #7A7A7A
+  FontColor #EEEEEE
+}
+
+skinparam package {
+  BackgroundColor #1A1A1A
+  BorderColor #5A5A5A
+  FontColor #E0E0E0
+  TitleFontColor #FFFFFF
+}
+
+skinparam cloud {
+  BackgroundColor #181818
+  BorderColor #5A5A5A
+  FontColor #CCCCCC
+}
+
+skinparam frame {
+  BackgroundColor #1A1A1A
+  BorderColor #6A6A6A
+  FontColor #DDDDDD
+  TitleFontColor #FFFFFF
+}
+
+skinparam database {
+  BackgroundColor #252526
+  BorderColor #7A7A7A
+  FontColor #EEEEEE
+}
+
+skinparam queue {
+  BackgroundColor #252526
+  BorderColor #7A7A7A
+  FontColor #EEEEEE
+}
+
+skinparam rectangle {
+  BackgroundColor #252526
+  BorderColor #7A7A7A
+  FontColor #EEEEEE
+}
+
+skinparam stereotypeCBackgroundColor #333333
+skinparam stereotypeCBorderColor #666666
+skinparam stereotypeCFontColor #CCCCCC

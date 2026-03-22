@@ -1,25 +1,97 @@
 # Ski Resort Conditions Dashboard
 
-A production-style, low-traffic **ski resort conditions** dashboard: a .NET 8 Web API with Entity Framework Core and Dapper, PostgreSQL on Amazon RDS, favorites in DynamoDB, weather ingestion via Amazon SQS, real-time updates through SignalR, and an **Angular 17** single-page application with Angular Material.
+A production-style, low-traffic **ski resort conditions** dashboard: live snow and lift/run snapshots, multi-resort comparison, favorites, and session-backed preferences. The stack is **Angular 17** (Material, Leaflet maps, SignalR client) and **ASP.NET Core 8** (REST, SignalR hub, EF Core + Dapper, hosted workers).
 
-## Architecture (summary)
+## Screenshots
 
-- **Frontend**: Angular SPA under `frontend/ski-resort-dashboard` (Material UI, `@microsoft/signalr` for live updates).
-- **Backend**: ASP.NET Core API in `backend/SkiResort.Api` — REST endpoints, SignalR hub at `/hubs/resort-conditions`, session-backed settings, background workers.
-- **Data**: PostgreSQL for resorts, snow conditions, lift/run snapshots; DynamoDB for per-user favorites when not using the in-memory dev repository.
-- **Messaging**: SQS queue consumed by `SqsIngestionWorker`; optional `WeatherSyncWorker` calls **Open-Meteo** on a schedule and persists to PostgreSQL.
-- **Observability**: OpenTelemetry traces and metrics in `Program.cs`, with meters and activities in `ObservabilityConstants`, exported via OTLP (for example to the AWS Distro for OpenTelemetry sidecar → CloudWatch in AWS).
+| Resort list & map | Resort detail |
+|:---:|:---:|
+| ![Resort list and map](img/home_page.png) | ![Resort detail](img/details.png) |
 
-**Diagrams (PlantUML)** in `docs/`:
+| Favorites | Snow comparison | Settings |
+|:---:|:---:|:---:|
+| ![Favorites](img/favourites.png) | ![Snow comparison](img/comparison.png) | ![Settings](img/settings.png) |
 
-| File | Purpose |
-|------|---------|
-| [`docs/sequence-data-ingestion.puml`](docs/sequence-data-ingestion.puml) | SQS ingestion and scheduled Open-Meteo sync → RDS → SignalR → browser |
-| [`docs/component-architecture.puml`](docs/component-architecture.puml) | Angular, API Gateway, ALB, ECS, RDS, DynamoDB, SQS, OTel, CloudFront/S3 |
+---
 
-Render locally with a [PlantUML](https://plantuml.com/) extension or CLI, or paste into any PlantUML-compatible renderer.
+## Tech stack
 
-**AWS deployment (console resources, security groups, URLs)** is documented in [`docs/aws-architecture.md`](docs/aws-architecture.md).
+| Layer | Technologies |
+|-------|----------------|
+| **SPA** | Angular 17, Angular Material, RxJS, Leaflet, `@microsoft/signalr` |
+| **API** | ASP.NET Core 8, SignalR, session middleware, `IAsyncEnumerable` streaming |
+| **ORM / SQL** | Entity Framework Core 8, Npgsql; **Dapper** for bulk/report queries |
+| **Data stores** | PostgreSQL (local Compose / **Amazon RDS**); **DynamoDB** for favorites in AWS |
+| **Messaging** | **Amazon SQS** (`SqsIngestionWorker`); scheduled **Open-Meteo** HTTP sync (`WeatherSyncWorker`) |
+| **Real-time** | SignalR hub `/hubs/resort-conditions`; optional **Redis** backplane for multi-instance |
+| **Observability** | OpenTelemetry (traces, metrics, OTLP); **AWS Distro for OpenTelemetry** → **CloudWatch** in AWS |
+| **Contracts** | Pact (.NET consumer + provider tests; pact JSON under `pacts/`) |
+| **Cloud (reference deployment)** | S3 + CloudFront (SPA), API Gateway HTTP API, ALB, **ECS Fargate**, ECR — see [`docs/aws-architecture.md`](docs/aws-architecture.md) |
+
+---
+
+## Architecture
+
+Traffic flows from the browser to a static frontend on **S3/CloudFront**, while **API Gateway** fronts the **.NET API** on **ECS Fargate** (behind an **ALB**). The API uses **RDS PostgreSQL** for resort and condition data, **DynamoDB** for favorites, **SQS** for optional queue-driven ingestion, and **SignalR** for push updates. **OpenTelemetry** exports to an **OTel collector** sidecar, which forwards telemetry to **CloudWatch**.
+
+### System overview (flowchart)
+
+The diagram below is [Mermaid](https://mermaid.js.org/) and renders automatically on GitHub. It matches the logical layout of the deployed system (the ingestion worker runs in the same API process/container as the web host).
+
+```mermaid
+flowchart TD
+  BrowserSPA[Browser / Angular SPA]
+  ApiGateway[API Gateway]
+  EcsFargate[Ecs Fargate service]
+  SkiResortApi[SkiResort.Api]
+  RdsPostgres[RDS PostgreSQL]
+  DynamoDbFavorites[DynamoDB favorites]
+  SqsQueue[SQS queue]
+  SignalRHub[SignalR hub]
+  SqsIngestionWorker[SqsIngestionWorker]
+  OtelCollector[OTel collector]
+  CloudWatch[CloudWatch]
+
+  BrowserSPA --> ApiGateway
+  ApiGateway --> EcsFargate
+  EcsFargate --> SkiResortApi
+  SkiResortApi --> RdsPostgres
+  SkiResortApi --> DynamoDbFavorites
+  SkiResortApi --> SqsQueue
+  SkiResortApi --> SignalRHub
+  SignalRHub --> BrowserSPA
+  SqsIngestionWorker --> SqsQueue
+  SqsIngestionWorker --> RdsPostgres
+  SkiResortApi --> OtelCollector
+  OtelCollector --> CloudWatch
+```
+
+### Detailed diagrams (PlantUML → PNG)
+
+Source files live under `docs/`. Diagrams use a shared **dark theme** ([`docs/plantuml-dark.inc.puml`](docs/plantuml-dark.inc.puml))—charcoal background (~`#121212`), light text, and flat boxes—similar to a dark IDE or the Mermaid-style layout above. Edit that include to tune colors.
+
+**Exported PNGs** (checked in for README and reviews) are in `docs/diagrams/`:
+
+| PNG (preview in GitHub) | Source `.puml` | What it shows |
+|-------------------------|----------------|---------------|
+| ![Component architecture](docs/diagrams/component-architecture.png) | [`docs/component-architecture.puml`](docs/component-architecture.puml) | CloudFront/S3, API Gateway, ALB, ECS, RDS, DynamoDB, SQS, OTel, CloudWatch, SignalR |
+| ![Sequence: ingestion](docs/diagrams/sequence-data-ingestion.png) | [`docs/sequence-data-ingestion.puml`](docs/sequence-data-ingestion.puml) | SQS path and hourly Open-Meteo sync → PostgreSQL → SignalR → browser |
+
+**Regenerate the PNGs** after editing the `.puml` files (requires [Docker](https://www.docker.com/)):
+
+```bash
+docker run --rm -v "${PWD}:/work" -w /work plantuml/plantuml:latest -tpng -o diagrams docs/component-architecture.puml docs/sequence-data-ingestion.puml
+```
+
+On **Windows PowerShell**, use the same command with your repo path, for example:
+
+```powershell
+docker run --rm -v "c:/development/SkiResortConditionsDashboard:/work" -w /work plantuml/plantuml:latest -tpng -o diagrams docs/component-architecture.puml docs/sequence-data-ingestion.puml
+```
+
+Other options: [PlantUML extension](https://marketplace.visualstudio.com/items?itemName=jebbs.plantuml) in VS Code / Cursor (export PNG/SVG), or the [PlantUML online server](https://www.plantuml.com/plantuml/uml/) by pasting the file contents.
+
+**AWS resource names, networking, and CORS** are documented in [`docs/aws-architecture.md`](docs/aws-architecture.md).
 
 ---
 
@@ -97,18 +169,18 @@ Use this table to trace each criterion to concrete artifacts in the repository.
 
 | # | Criterion (summary) | Where to look in this repo |
 |---|---------------------|----------------------------|
-| **1** | Cloud API router (e.g. API Gateway) | [`docs/aws-architecture.md`](docs/aws-architecture.md) (HTTP API routes, integration to ALB); [`docs/component-architecture.puml`](docs/component-architecture.puml) |
-| **2** | API managed in cloud (e.g. ECS Fargate) | [`backend/SkiResort.Api/Dockerfile`](backend/SkiResort.Api/Dockerfile); [`docker-compose.yml`](docker-compose.yml) (`api` service); [`docs/aws-architecture.md`](docs/aws-architecture.md) (ECS service, task, ALB) |
-| **3** | Message queuing (SQS) | [`backend/SkiResort.Api/Workers/SqsIngestionWorker.cs`](backend/SkiResort.Api/Workers/SqsIngestionWorker.cs); [`backend/SkiResort.Api/Options/SqsIngestionOptions.cs`](backend/SkiResort.Api/Options/SqsIngestionOptions.cs); [`backend/SkiResort.Api/Program.cs`](backend/SkiResort.Api/Program.cs) (`AddAWSService<IAmazonSQS>()`, hosted service); [`docs/sequence-data-ingestion.puml`](docs/sequence-data-ingestion.puml) |
-| **4** | Cloud sync / NoSQL (DynamoDB) | [`backend/SkiResort.Infrastructure/Favorites/UserFavoritesRepository.cs`](backend/SkiResort.Infrastructure/Favorites/UserFavoritesRepository.cs); [`backend/SkiResort.Api/Controllers/FavoritesController.cs`](backend/SkiResort.Api/Controllers/FavoritesController.cs); [`backend/SkiResort.Api/Program.cs`](backend/SkiResort.Api/Program.cs) (DynamoDB registration); Angular: `frontend/ski-resort-dashboard/src/app/core/services/favorites.service.ts` and favorites feature |
+| **1** | Cloud API router (e.g. API Gateway) | [`docs/aws-architecture.md`](docs/aws-architecture.md); Mermaid diagram above; [`docs/diagrams/component-architecture.png`](docs/diagrams/component-architecture.png) |
+| **2** | API managed in cloud (e.g. ECS Fargate) | [`backend/SkiResort.Api/Dockerfile`](backend/SkiResort.Api/Dockerfile); [`docker-compose.yml`](docker-compose.yml) (`api` service); [`docs/aws-architecture.md`](docs/aws-architecture.md) |
+| **3** | Message queuing (SQS) | [`backend/SkiResort.Api/Workers/SqsIngestionWorker.cs`](backend/SkiResort.Api/Workers/SqsIngestionWorker.cs); [`backend/SkiResort.Api/Options/SqsIngestionOptions.cs`](backend/SkiResort.Api/Options/SqsIngestionOptions.cs); [`backend/SkiResort.Api/Program.cs`](backend/SkiResort.Api/Program.cs); [`docs/diagrams/sequence-data-ingestion.png`](docs/diagrams/sequence-data-ingestion.png) |
+| **4** | Cloud sync / NoSQL (DynamoDB) | [`backend/SkiResort.Infrastructure/Favorites/UserFavoritesRepository.cs`](backend/SkiResort.Infrastructure/Favorites/UserFavoritesRepository.cs); [`backend/SkiResort.Api/Controllers/FavoritesController.cs`](backend/SkiResort.Api/Controllers/FavoritesController.cs); [`backend/SkiResort.Api/Program.cs`](backend/SkiResort.Api/Program.cs); Angular: `frontend/ski-resort-dashboard/src/app/core/services/favorites.service.ts` |
 | **5** | **KEY** — RDS PostgreSQL | [`backend/SkiResort.Infrastructure/Data/SkiResortDbContext.cs`](backend/SkiResort.Infrastructure/Data/SkiResortDbContext.cs); [`backend/SkiResort.Domain/Entities/`](backend/SkiResort.Domain/Entities/); [`backend/SkiResort.Infrastructure/Migrations/`](backend/SkiResort.Infrastructure/Migrations/); [`docker-compose.yml`](docker-compose.yml) (`db` service) |
-| **6** | **KEY** — Containers / ECS | [`backend/SkiResort.Api/Dockerfile`](backend/SkiResort.Api/Dockerfile); [`docker-compose.yml`](docker-compose.yml); ECS task and cluster details in [`docs/aws-architecture.md`](docs/aws-architecture.md) |
-| **7** | Pact contract tests | [`backend/SkiResort.Tests/Contracts/ResortsConsumerPactTests.cs`](backend/SkiResort.Tests/Contracts/ResortsConsumerPactTests.cs); [`backend/Pact.Provider.Tests/Contracts/ResortsProviderPactTests.cs`](backend/Pact.Provider.Tests/Contracts/ResortsProviderPactTests.cs); generated pact under `pacts/` (after running consumer tests) |
-| **8** | OpenTelemetry → CloudWatch | [`backend/SkiResort.Api/Program.cs`](backend/SkiResort.Api/Program.cs) (`AddOpenTelemetry`, OTLP exporter); [`backend/SkiResort.Api/Observability/ObservabilityConstants.cs`](backend/SkiResort.Api/Observability/ObservabilityConstants.cs); ADOT / CloudWatch wiring in [`docs/aws-architecture.md`](docs/aws-architecture.md) |
-| **9** | SignalR real-time | [`backend/SkiResort.Api/Hubs/ResortConditionsHub.cs`](backend/SkiResort.Api/Hubs/ResortConditionsHub.cs); [`backend/SkiResort.Api/Realtime/ResortUpdateNotifier.cs`](backend/SkiResort.Api/Realtime/ResortUpdateNotifier.cs); [`backend/SkiResort.Api/Program.cs`](backend/SkiResort.Api/Program.cs) (`MapHub`); [`frontend/ski-resort-dashboard/src/app/core/services/signalr-resort-updates.service.ts`](frontend/ski-resort-dashboard/src/app/core/services/signalr-resort-updates.service.ts) |
-| **10** | Sessions | [`backend/SkiResort.Api/Program.cs`](backend/SkiResort.Api/Program.cs) (`AddSession`, `UseSession`); [`backend/SkiResort.Api/Controllers/SettingsController.cs`](backend/SkiResort.Api/Controllers/SettingsController.cs); Angular settings feature and `settings.service.ts` |
-| **11** | Large / efficient data access | Keyset pagination and conditions: [`backend/SkiResort.Api/Controllers/ResortsController.cs`](backend/SkiResort.Api/Controllers/ResortsController.cs) (`GET .../conditions`); streaming: `GET .../snow-history/stream` (`IAsyncEnumerable`); Dapper report: [`backend/SkiResort.Infrastructure/Reports/SnowComparisonReportRepository.cs`](backend/SkiResort.Infrastructure/Reports/SnowComparisonReportRepository.cs); [`backend/SkiResort.Api/Controllers/ReportsController.cs`](backend/SkiResort.Api/Controllers/ReportsController.cs) (`GET /api/reports/snow-comparison`) |
-| **12** | UML / PlantUML | [`docs/sequence-data-ingestion.puml`](docs/sequence-data-ingestion.puml); [`docs/component-architecture.puml`](docs/component-architecture.puml) |
+| **6** | **KEY** — Containers / ECS | [`backend/SkiResort.Api/Dockerfile`](backend/SkiResort.Api/Dockerfile); [`docker-compose.yml`](docker-compose.yml); [`docs/aws-architecture.md`](docs/aws-architecture.md) |
+| **7** | Pact contract tests | [`backend/SkiResort.Tests/Contracts/ResortsConsumerPactTests.cs`](backend/SkiResort.Tests/Contracts/ResortsConsumerPactTests.cs); [`backend/Pact.Provider.Tests/Contracts/ResortsProviderPactTests.cs`](backend/Pact.Provider.Tests/Contracts/ResortsProviderPactTests.cs); generated pact under `pacts/` |
+| **8** | OpenTelemetry → CloudWatch | [`backend/SkiResort.Api/Program.cs`](backend/SkiResort.Api/Program.cs); [`backend/SkiResort.Api/Observability/ObservabilityConstants.cs`](backend/SkiResort.Api/Observability/ObservabilityConstants.cs); [`docs/aws-architecture.md`](docs/aws-architecture.md) |
+| **9** | SignalR real-time | [`backend/SkiResort.Api/Hubs/ResortConditionsHub.cs`](backend/SkiResort.Api/Hubs/ResortConditionsHub.cs); [`backend/SkiResort.Api/Realtime/ResortUpdateNotifier.cs`](backend/SkiResort.Api/Realtime/ResortUpdateNotifier.cs); [`backend/SkiResort.Api/Program.cs`](backend/SkiResort.Api/Program.cs); [`frontend/ski-resort-dashboard/src/app/core/services/signalr-resort-updates.service.ts`](frontend/ski-resort-dashboard/src/app/core/services/signalr-resort-updates.service.ts) |
+| **10** | Sessions | [`backend/SkiResort.Api/Program.cs`](backend/SkiResort.Api/Program.cs); [`backend/SkiResort.Api/Controllers/SettingsController.cs`](backend/SkiResort.Api/Controllers/SettingsController.cs); `settings.service.ts` |
+| **11** | Large / efficient data access | [`backend/SkiResort.Api/Controllers/ResortsController.cs`](backend/SkiResort.Api/Controllers/ResortsController.cs) (`GET .../conditions`, `GET .../snow-history/stream`); [`backend/SkiResort.Infrastructure/Reports/SnowComparisonReportRepository.cs`](backend/SkiResort.Infrastructure/Reports/SnowComparisonReportRepository.cs); [`backend/SkiResort.Api/Controllers/ReportsController.cs`](backend/SkiResort.Api/Controllers/ReportsController.cs) |
+| **12** | UML / PlantUML | [`docs/sequence-data-ingestion.puml`](docs/sequence-data-ingestion.puml); [`docs/component-architecture.puml`](docs/component-architecture.puml); PNG exports in [`docs/diagrams/`](docs/diagrams/) |
 
 ---
 
