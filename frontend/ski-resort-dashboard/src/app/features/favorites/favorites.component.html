@@ -58,6 +58,10 @@
 
     <div class="favorites__state favorites__state--error" *ngIf="!loading && error">
       <p>{{ error }}</p>
+      <button mat-stroked-button color="primary" (click)="retryLoad()">
+        <mat-icon>refresh</mat-icon>
+        Retry
+      </button>
     </div>
   </ng-template>
 </section>

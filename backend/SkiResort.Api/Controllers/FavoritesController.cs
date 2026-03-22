@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon.Runtime;
 using Microsoft.AspNetCore.Mvc;
 using SkiResort.Api.Models;
 using SkiResort.Domain.Entities;
@@ -14,10 +15,14 @@ namespace SkiResort.Api.Controllers;
 public class FavoritesController : ControllerBase
 {
     private readonly IUserFavoritesRepository _repository;
+    private readonly ILogger<FavoritesController> _logger;
 
-    public FavoritesController(IUserFavoritesRepository repository)
+    public FavoritesController(
+        IUserFavoritesRepository repository,
+        ILogger<FavoritesController> logger)
     {
         _repository = repository;
+        _logger = logger;
     }
 
     /// <summary>
@@ -59,7 +64,16 @@ public class FavoritesController : ControllerBase
             ResortId = request.ResortId
         };
 
-        await _repository.AddFavoriteAsync(favorite, cancellationToken);
+        try
+        {
+            await _repository.AddFavoriteAsync(favorite, cancellationToken);
+        }
+        catch (AmazonServiceException ex)
+        {
+            _logger.LogError(ex, "DynamoDB error adding favorite for user {UserId}", userId);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { error = "Favorites storage is unavailable. Check ECS task role DynamoDB permissions and table name." });
+        }
 
         return NoContent();
     }
@@ -84,7 +98,17 @@ public class FavoritesController : ControllerBase
             ResortId = resortId
         };
 
-        await _repository.AddFavoriteAsync(favorite, cancellationToken);
+        try
+        {
+            await _repository.AddFavoriteAsync(favorite, cancellationToken);
+        }
+        catch (AmazonServiceException ex)
+        {
+            _logger.LogError(ex, "DynamoDB error adding favorite for user {UserId}", userId);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { error = "Favorites storage is unavailable. Check ECS task role DynamoDB permissions and table name." });
+        }
+
         return NoContent();
     }
 
@@ -102,7 +126,16 @@ public class FavoritesController : ControllerBase
         }
 
         var userId = GetUserId();
-        await _repository.RemoveFavoriteAsync(userId, resortId, cancellationToken);
+        try
+        {
+            await _repository.RemoveFavoriteAsync(userId, resortId, cancellationToken);
+        }
+        catch (AmazonServiceException ex)
+        {
+            _logger.LogError(ex, "DynamoDB error removing favorite for user {UserId}", userId);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { error = "Favorites storage is unavailable. Check ECS task role DynamoDB permissions and table name." });
+        }
 
         return NoContent();
     }
