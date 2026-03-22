@@ -2,6 +2,8 @@
 
 A production-style, low-traffic **ski resort conditions** dashboard: live snow and lift/run snapshots, multi-resort comparison, favorites, and session-backed preferences. The stack is **Angular 17** (Material, Leaflet maps, SignalR client) and **ASP.NET Core 8** (REST, SignalR hub, EF Core + Dapper, hosted workers).
 
+**Live app (CloudFront):** [Ski Resort Dashboard — resorts](https://dnjatcqx268s0.cloudfront.net/resorts)
+
 ## Screenshots
 
 | Resort list & map | Resort detail |
