@@ -1,0 +1,54 @@
+@startuml component-architecture
+!theme plain
+title Ski Resort Conditions Dashboard — cloud and application components
+
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+package "End user" {
+  [Angular SPA\n(ski-resort-dashboard)] as SPA <<browser>>
+}
+
+cloud "AWS" {
+  together {
+    [Amazon CloudFront] as CF
+    [Amazon S3\n(static hosting)] as S3
+  }
+
+  [API Gateway\n(HTTP API)] as APIGW
+  [Application Load Balancer] as ALB
+
+  frame "Amazon ECS\n(Fargate)" as ECS {
+    [SkiResort.Api\n.NET 8 container] as API <<container>>
+    [AWS Distro for OpenTelemetry\n(ADOT collector sidecar)] as ADOT <<container>>
+  }
+
+  database "Amazon RDS\nPostgreSQL" as RDS
+  database "Amazon DynamoDB\nSkiResortUserFavorites" as DDB
+  queue "Amazon SQS\nweather ingestion" as SQS
+  [Amazon CloudWatch\n(logs / metrics / traces)] as CW
+}
+
+SPA --> CF : HTTPS\n(SPA assets)
+CF --> S3 : origin (OAC)
+
+SPA --> APIGW : HTTPS\n/api/* and negotiate
+APIGW --> ALB : proxy integration
+ALB --> API : HTTP :8080
+
+API --> RDS : EF Core, Dapper
+API --> DDB : favorites (IAmazonDynamoDB)
+API --> SQS : receive / delete messages
+API --> ADOT : OTLP gRPC\n(127.0.0.1:4317)
+ADOT --> CW : export telemetry
+
+SPA ..> API : SignalR\n/hubs/resort-conditions\n(same API origin or gateway)
+
+note right of API
+  REST controllers (resorts, reports,
+  favorites, settings), SignalR hub,
+  SqsIngestionWorker, WeatherSyncWorker,
+  session middleware, OpenTelemetry SDK
+end note
+
+@enduml

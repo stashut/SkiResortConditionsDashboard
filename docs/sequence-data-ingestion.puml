@@ -1,0 +1,45 @@
+@startuml sequence-data-ingestion
+!theme plain
+title Ski Resort Conditions Dashboard — data ingestion and real-time fan-out
+
+skinparam sequenceMessageAlign center
+autonumber
+
+actor "Producer / job" as Producer
+queue "Amazon SQS\n(ski-resort-weather-ingestion)" as SQS
+participant "SqsIngestionWorker\n(ASP.NET Core hosted service)" as Ingest
+database "RDS PostgreSQL" as RDS
+participant "ResortUpdateNotifier" as Notifier
+participant "ResortConditionsHub\n(SignalR)" as Hub
+actor "Browser\n(Angular SPA)" as Browser
+
+== Queue-driven ingestion ==
+Producer -> SQS : SendMessage\n(WeatherIngestionMessage JSON)
+Ingest -> SQS : ReceiveMessageAsync\n(long poll, batch)
+SQS --> Ingest : messages
+Ingest -> RDS : EF Core: add SnowCondition,\nSaveChangesAsync
+Ingest -> Notifier : NotifyResortConditionsUpdatedAsync(resortId)
+Notifier -> Hub : Clients.Group(resort-...).SendAsync(...)
+Hub -> Browser : ResortConditionsUpdated\n(WebSocket / SSE / long poll)
+Ingest -> SQS : DeleteMessageAsync\n(after successful processing)
+
+== Scheduled Open-Meteo sync (parallel path) ==
+participant "WeatherSyncWorker" as Sync
+participant "Open-Meteo API\n(https://api.open-meteo.com)" as OpenMeteo
+
+loop approximately hourly
+  Sync -> OpenMeteo : HTTP GET\n(forecast for resort coordinates)
+  OpenMeteo --> Sync : JSON (snow, temp, wind, …)
+  Sync -> RDS : EF Core: persist SnowCondition
+  Sync -> Notifier : NotifyResortConditionsUpdatedAsync
+  Notifier -> Hub : SendAsync to resort group
+  Hub -> Browser : live condition updates
+end
+
+note over Ingest, RDS
+  SQS path uses payload embedded in the message.
+  Open-Meteo path does not use SQS; both paths write to RDS
+  and fan out via SignalR.
+end note
+
+@enduml
