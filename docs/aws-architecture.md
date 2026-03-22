@@ -31,7 +31,8 @@ Browser / Angular SPA
                               │    .NET 8 ASP.NET Core API                  │
                               │    – REST endpoints                          │
                               │    – SignalR hub                             │
-                              │    – SQS ingestion worker                    │
+                              │    – SqsIngestionWorker (SQS → RDS)          │
+                              │    – WeatherSyncWorker (Open-Meteo → RDS)    │
                               │    – Emits OTLP → 127.0.0.1:4317            │
                               │                                              │
                               │  Container 2: adot-collector   (port 4317)  │
@@ -80,7 +81,7 @@ Browser / Angular SPA
 - **Routes:**
   - `ANY /api/{proxy+}` → forwards all API traffic to the ALB. Integration uses `overwrite:path=$request.path` to preserve the full original path.
   - `GET /` → health/root check
-- **CORS:** Configured at the API Gateway level — `AllowOrigins` includes the CloudFront domain and localhost dev origins. `AllowCredentials: false` (no cookies/auth yet).
+- **CORS:** Configured at the API Gateway level for browser `fetch`/XHR. **Re-check** `AllowOrigins` and `AllowCredentials` whenever you use session cookies or SignalR through the gateway; the ASP.NET app enables credentialed CORS for SignalR, so gateway and ALB integration must stay consistent with the SPA’s actual origin and negotiate URL.
 
 ---
 
@@ -105,11 +106,13 @@ Browser / Angular SPA
 - Image from ECR (`ski-resort-api:latest`)
 - Exposes port **8080**
 - Runs the ASP.NET Core API with:
-  - REST controllers (resorts, conditions, favorites, reports, settings)
+  - REST: `ResortsController` (list resorts, `GET .../conditions` with keyset pagination, `GET .../snow-history/stream`), `FavoritesController`, `ReportsController`, `SettingsController`
   - SignalR hub (`/hubs/resort-conditions`) for real-time updates
-  - SQS background worker polling `ski-resort-weather-ingestion`
-- Key env vars: `ConnectionStrings__Postgres`, `SqsIngestion__QueueUrl`, `AWS__Region`, `ASPNETCORE_ENVIRONMENT=Production`
-- **CORS:** `app.UseCors()` middleware with `SetIsOriginAllowed(_ => true)` + `AllowCredentials()` — required for browser preflight requests and SignalR WebSocket negotiation
+  - `SqsIngestionWorker` — polls `ski-resort-weather-ingestion`, persists `SnowCondition`, notifies via SignalR
+  - `WeatherSyncWorker` — on a timer, calls **Open-Meteo** (`https://api.open-meteo.com`) for resorts with coordinates, persists enriched conditions, notifies via SignalR
+- Key env vars: `ConnectionStrings__Postgres`, `SqsIngestion__QueueUrl`, `AWS__Region`, `ASPNETCORE_ENVIRONMENT=Production`, `Favorites__UseInMemoryRepository=false` (use DynamoDB in AWS), optional `Favorites__DynamoDbTableName`
+- **SignalR scale-out:** optional `ConnectionStrings__Redis` or `SignalR__RedisConnectionString` (Stack Exchange Redis backplane) when ECS desired count > 1
+- **CORS:** `app.UseCors()` uses `AllowCredentials()` for SignalR negotiate. Ensure **API Gateway** CORS (if used) matches how the SPA calls the API (origins, `AllowCredentials`, and WebSocket upgrade behavior for SignalR).
 - Logs to CloudWatch log group `/ecs/ski-resort-api`
 
 #### Container 2 — `adot-collector`
@@ -148,14 +151,14 @@ Browser / Angular SPA
 - **Capacity:** On-demand
 - **PITR:** Enabled (35-day recovery window)
 - **Purpose:** Stores per-user saved resort favorites. Chosen for its schemaless, low-latency key-value access pattern — no joins needed for favorites lookups.
-- **Accessed by:** `UserFavoritesRepository` via the AWS SDK (`IAmazonDynamoDB`). Falls back to in-memory store if AWS credentials are not present (local dev).
+- **Accessed by:** `DynamoDbUserFavoritesRepository` (`IAmazonDynamoDB`) when `Favorites:UseInMemoryRepository` is **false** (typical in Production on ECS). When **true** (default in local Development), the API uses `InMemoryUserFavoritesRepository` instead—no DynamoDB calls.
 
 ---
 
 ### 9. SQS
 - **Queue:** `ski-resort-weather-ingestion`
 - **Type:** Standard (at-least-once delivery)
-- **Purpose:** Decouples weather/snow data ingestion from the API. External producers (weather data jobs) publish messages to the queue; the `SqsIngestionWorker` background service inside the API container polls and processes them, persisting new `SnowCondition` records to RDS and notifying connected clients via SignalR.
+- **Purpose:** Decouples queue-driven weather/snow ingestion from synchronous API traffic. External producers publish messages; `SqsIngestionWorker` in the API task polls, deserializes `WeatherIngestionMessage`, persists `SnowCondition` to RDS, then notifies clients via SignalR. **Scheduled** weather is handled separately by `WeatherSyncWorker` calling Open-Meteo (no SQS).
 - **Worker config:** `SqsIngestion__QueueUrl` env var, long-polling (10s wait time), up to 10 messages per receive.
 
 ---
@@ -218,9 +221,14 @@ Browser → CloudFront (edge cache) → S3 bucket → index.html + JS/CSS chunks
 Browser → API Gateway (CORS check) → ALB → ECS task (port 8080) → RDS PostgreSQL
 ```
 
-### Real-time update
+### Real-time update (queue)
 ```
-SQS message → SqsIngestionWorker → ECS task → RDS (persist) → SignalR hub → Browser
+SQS message → SqsIngestionWorker → RDS (persist SnowCondition) → ResortUpdateNotifier → SignalR hub → Browser
+```
+
+### Real-time update (scheduled Open-Meteo)
+```
+WeatherSyncWorker → Open-Meteo API → RDS (persist) → ResortUpdateNotifier → SignalR hub → Browser
 ```
 
 ### Favorites
@@ -237,3 +245,9 @@ ECS task → OTLP (127.0.0.1:4317) → adot-collector → CloudWatch Logs/Metric
 ```
 ng build → aws s3 sync → aws cloudfront create-invalidation
 ```
+
+---
+
+## Related diagrams in repo
+
+Machine-readable architecture and sequence diagrams (including a dark-theme PlantUML style): [`component-architecture.puml`](component-architecture.puml), [`sequence-data-ingestion.puml`](sequence-data-ingestion.puml), shared styles in [`plantuml-dark.inc.puml`](plantuml-dark.inc.puml), and exported PNGs in [`diagrams/`](diagrams/). The repository [`README.md`](../README.md) summarizes the stack and links to this file.
