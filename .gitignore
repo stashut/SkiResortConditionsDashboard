@@ -17,6 +17,7 @@ obj/
 out/
 TestResults/
 .vscode/
+.cursor/
 
 # ASP.NET publish artifacts
 *.pubxml
