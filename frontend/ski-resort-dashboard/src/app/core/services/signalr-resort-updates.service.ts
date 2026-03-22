@@ -1,12 +1,15 @@
 import { inject, Injectable } from '@angular/core';
 import {
+  HttpTransportType,
   HubConnection,
   HubConnectionBuilder,
   HubConnectionState,
-  LogLevel
+  LogLevel,
+  NullLogger
 } from '@microsoft/signalr';
 import { Subject } from 'rxjs';
 import { APP_API_BASE_URL } from '../tokens/app-config.token';
+import { SignalrOmitCredentialsHttpClient } from './signalr-omit-credentials-http-client';
 
 export interface ResortConditionsUpdatedEvent {
   resortId: string;
@@ -36,7 +39,16 @@ export class SignalrResortUpdatesService {
 
     if (!this.hub) {
       this.hub = new HubConnectionBuilder()
-        .withUrl(this.hubUrl)
+        // WebSockets can fail through some proxies; LongPolling uses plain HTTP and often works once /hubs/* is routed.
+        // Cross-origin (CloudFront → execute-api): use fetch with credentials "omit" via a custom HttpClient so
+        // negotiate is never credentialed (matches API Gateway CORS with Allow credentials off).
+        .withUrl(this.hubUrl, {
+          // API Gateway HTTP API does not proxy WebSockets to Kestrel; LongPolling (plain HTTP) is the
+          // only transport that works end-to-end through execute-api without a dedicated WebSocket API.
+          transport: HttpTransportType.LongPolling,
+          withCredentials: false,
+          httpClient: new SignalrOmitCredentialsHttpClient(NullLogger.instance)
+        })
         .withAutomaticReconnect()
         .configureLogging(LogLevel.Information)
         .build();
@@ -56,7 +68,7 @@ export class SignalrResortUpdatesService {
 
     this.startPromise = this.hub.start().then(() => this.syncAllSubscriptions());
     void this.startPromise.catch((err) => {
-      console.error('SignalR connection failed', err);
+      console.error('SignalR connection failed', { hubUrl: this.hubUrl, err });
     });
   }
 

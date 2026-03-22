@@ -24,7 +24,7 @@ import {
   SignalrResortUpdatesService,
   ResortConditionsUpdatedEvent
 } from '../../core/services/signalr-resort-updates.service';
-import { Subscription } from 'rxjs';
+import { forkJoin, retry, Subscription } from 'rxjs';
 import * as L from 'leaflet';
 import {
   fmtNum,
@@ -296,35 +296,31 @@ export class ResortListComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loading = true;
     this.error = undefined;
 
-    this.resortService.getResorts().subscribe({
-      next: (resorts) => {
-        this.resorts = resorts;
-        this.loading = false;
-        this.syncSignalrSubscriptions(resorts.map((r) => r.id));
-        for (const resort of this.resorts) {
-          this.placeMarker(resort);
+    forkJoin({
+      resorts: this.resortService.getResorts(),
+      favorites: this.favoritesService.getFavorites()
+    })
+      .pipe(retry({ count: 3, delay: 1500 }))
+      .subscribe({
+        next: ({ resorts, favorites }) => {
+          const ids = new Set(favorites.map((f) => f.resortId));
+          this.resorts = resorts.map((r) => ({ ...r, isFavorite: ids.has(r.id) }));
+          this.loading = false;
+          this.syncSignalrSubscriptions(resorts.map((r) => r.id));
+          for (const resort of this.resorts) {
+            this.placeMarker(resort);
+          }
+          const openId = this.detailResort?.id;
+          if (this.panelMode === 'detail' && openId) {
+            this.detailResort = this.resorts.find((r) => r.id === openId);
+          }
+        },
+        error: (err) => {
+          const status = (err as any)?.status;
+          this.error = `Unable to load resorts${status ? ` (HTTP ${status})` : ''}.`;
+          this.loading = false;
         }
-        // Markers placed; EU initial view is kept (no fitBounds)
-      },
-      error: (err) => {
-        const status = (err as any)?.status;
-        this.error = `Unable to load resorts${status ? ` (HTTP ${status})` : ''}.`;
-        this.loading = false;
-      }
-    });
-
-    this.favoritesService.getFavorites().subscribe({
-      next: (favorites) => {
-        const ids = new Set(favorites.map((f) => f.resortId));
-        this.resorts = this.resorts.map((r) => ({ ...r, isFavorite: ids.has(r.id) }));
-        // Remapped rows are new objects — keep detail panel pointing at the current row
-        const openId = this.detailResort?.id;
-        if (this.panelMode === 'detail' && openId) {
-          this.detailResort = this.resorts.find((r) => r.id === openId);
-        }
-      },
-      error: () => {}
-    });
+      });
   }
 
   private syncSignalrSubscriptions(resortIds: string[]): void {

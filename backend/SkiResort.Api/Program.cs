@@ -2,7 +2,9 @@ using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.Extensions.NETCore.Setup;
 using Amazon.SQS;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -36,18 +38,24 @@ builder.Services.AddScoped<ISnowComparisonReportRepository>(sp =>
     return new SnowComparisonReportRepository(connectionString);
 });
 
-// DynamoDB-backed favorites; falls back to in-memory when AWS credentials are absent (local dev).
-var awsAccessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
-var awsSecretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+// Favorites: DynamoDB in AWS (ECS task role / default credential chain). In-memory only for typical
+// local `dotnet run` — ECS Fargate usually has NO static AWS_ACCESS_KEY_ID, so the old key check
+// wrongly forced in-memory and favorites were lost on every task restart.
+var useInMemoryFavorites = builder.Configuration.GetValue(
+    "Favorites:UseInMemoryRepository",
+    builder.Environment.IsDevelopment());
 
-if (string.IsNullOrWhiteSpace(awsAccessKey) || string.IsNullOrWhiteSpace(awsSecretKey))
+if (useInMemoryFavorites)
+{
     builder.Services.AddSingleton<IUserFavoritesRepository, InMemoryUserFavoritesRepository>();
+}
 else
 {
     builder.Services.AddAWSService<IAmazonDynamoDB>();
+    var tableName = builder.Configuration["Favorites:DynamoDbTableName"] ?? "SkiResortUserFavorites";
     builder.Services.AddSingleton<IUserFavoritesRepository>(_ =>
         new DynamoDbUserFavoritesRepository(
-            _.GetRequiredService<IAmazonDynamoDB>(), "SkiResortUserFavorites"));
+            _.GetRequiredService<IAmazonDynamoDB>(), tableName));
 }
 
 builder.Services.AddAWSService<IAmazonSQS>();
@@ -61,7 +69,26 @@ builder.Services.AddHttpClient("openmeteo", c =>
     c.Timeout = TimeSpan.FromSeconds(10);
 });
 
-builder.Services.AddSignalR();
+// Multi-instance (e.g. ECS desired count > 1): negotiate/SSE/POST must share state across tasks.
+// Set ConnectionStrings__Redis (ElastiCache primary endpoint) in production; omit for single-instance / local dev.
+var signalRBuilder = builder.Services.AddSignalR();
+var redisForSignalR = builder.Configuration.GetConnectionString("Redis")
+                      ?? builder.Configuration["SignalR:RedisConnectionString"];
+if (!string.IsNullOrWhiteSpace(redisForSignalR))
+{
+    // Visible in ECS CloudWatch: confirms task definition env ConnectionStrings__Redis reached the process.
+    Console.WriteLine("[SignalR] Redis backplane enabled (ConnectionStrings:Redis is set).");
+    signalRBuilder.AddStackExchangeRedis(redisForSignalR, options =>
+    {
+        options.Configuration.ChannelPrefix = RedisChannel.Literal("ski-resort-signalr");
+    });
+}
+else
+{
+    Console.WriteLine(
+        "[SignalR] Redis backplane NOT configured — set env ConnectionStrings__Redis for multi-task SignalR.");
+}
+
 builder.Services.AddSingleton<ResortUpdateNotifier>();
 
 builder.Services.AddDistributedMemoryCache();
@@ -86,6 +113,8 @@ builder.Services.AddOpenTelemetry()
         .AddMeter(ObservabilityConstants.MeterName)
         .AddOtlpExporter());
 
+// AllowCredentials: SignalR’s default client sends credentialed negotiate (XHR/fetch include). Browsers require
+// Access-Control-Allow-Credentials: true on preflight + response. Origins are reflected (not *), which is valid with credentials.
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy => policy
         .SetIsOriginAllowed(_ => true)
@@ -95,8 +124,21 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddControllers();
 
+// Behind ALB / API Gateway: correct scheme/host for redirects and SignalR negotiate URLs.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto |
+        ForwardedHeaders.XForwardedHost;
+    // ALB is the only trusted proxy in this path; avoid rejecting forwarded headers.
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseCors();
 app.UseSession();
 
@@ -112,6 +154,12 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/", () => "Ski Resort Conditions API");
 app.MapControllers();
-app.MapHub<ResortConditionsHub>("/hubs/resort-conditions");
+app.MapHub<ResortConditionsHub>("/hubs/resort-conditions", options =>
+{
+    // API Gateway HTTP API enforces a 29-second integration timeout.
+    // Constrain the long-poll to 20 seconds so the server closes it with 204 cleanly
+    // before the gateway kills it with 503 Service Unavailable.
+    options.LongPolling.PollTimeout = TimeSpan.FromSeconds(20);
+});
 
 app.Run();

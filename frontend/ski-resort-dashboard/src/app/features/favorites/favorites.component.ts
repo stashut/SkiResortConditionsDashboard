@@ -13,7 +13,7 @@ import {
   ResortConditionsUpdatedEvent
 } from '../../core/services/signalr-resort-updates.service';
 import { ResortService } from '../../core/services/resort.service';
-import { forkJoin } from 'rxjs';
+import { forkJoin, retry } from 'rxjs';
 import { Subscription } from 'rxjs';
 
 interface FavoriteItem extends Resort {
@@ -83,20 +83,26 @@ export class FavoritesComponent implements OnInit, OnDestroy {
     forkJoin({
       resorts: this.resortService.getResorts(),
       favorites: this.favoritesService.getFavorites()
-    }).subscribe({
-      next: ({ resorts, favorites }) => {
-        const favoriteIds = new Set(favorites.map((f) => f.resortId));
-        this.favorites = resorts
-          .filter((r) => favoriteIds.has(r.id))
-          .map((r) => ({ ...r, hasLiveUpdate: false }));
-        this.syncSignalrSubscriptions(this.favorites.map((f) => f.id));
-        this.loading = false;
-      },
-      error: () => {
-        this.error = 'Unable to load favorites.';
-        this.loading = false;
-      }
-    });
+    })
+      .pipe(retry({ count: 3, delay: 1500 }))
+      .subscribe({
+        next: ({ resorts, favorites }) => {
+          const favoriteIds = new Set(favorites.map((f) => f.resortId));
+          this.favorites = resorts
+            .filter((r) => favoriteIds.has(r.id))
+            .map((r) => ({ ...r, hasLiveUpdate: false }));
+          this.syncSignalrSubscriptions(this.favorites.map((f) => f.id));
+          this.loading = false;
+        },
+        error: () => {
+          this.error = 'Unable to load favorites.';
+          this.loading = false;
+        }
+      });
+  }
+
+  retryLoad(): void {
+    this.loadFavorites();
   }
 
   private syncSignalrSubscriptions(resortIds: string[]): void {
