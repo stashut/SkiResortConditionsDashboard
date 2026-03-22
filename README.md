@@ -38,8 +38,6 @@ Traffic flows from the browser to a static frontend on **S3/CloudFront**, while 
 
 ### System overview (flowchart)
 
-The diagram below is [Mermaid](https://mermaid.js.org/) and renders automatically on GitHub. It matches the logical layout of the deployed system (the ingestion worker runs in the same API process/container as the web host).
-
 ```mermaid
 flowchart TD
   BrowserSPA[Browser / Angular SPA]
@@ -68,30 +66,12 @@ flowchart TD
   OtelCollector --> CloudWatch
 ```
 
-### Detailed diagrams (PlantUML → PNG)
+### Detailed diagrams
 
-Source files live under `docs/`. Diagrams use a shared **dark theme** ([`docs/plantuml-dark.inc.puml`](docs/plantuml-dark.inc.puml))—charcoal background (~`#121212`), light text, and flat boxes—similar to a dark IDE or the Mermaid-style layout above. Edit that include to tune colors.
-
-**Exported PNGs** (checked in for README and reviews) are in `docs/diagrams/`:
-
-| PNG (preview in GitHub) | Source `.puml` | What it shows |
+| Diagram | Source `.puml` | What it shows |
 |-------------------------|----------------|---------------|
 | ![Component architecture](docs/diagrams/component-architecture.png) | [`docs/component-architecture.puml`](docs/component-architecture.puml) | CloudFront/S3, API Gateway, ALB, ECS, RDS, DynamoDB, SQS, OTel, CloudWatch, SignalR |
 | ![Sequence: ingestion](docs/diagrams/sequence-data-ingestion.png) | [`docs/sequence-data-ingestion.puml`](docs/sequence-data-ingestion.puml) | SQS path and hourly Open-Meteo sync → PostgreSQL → SignalR → browser |
-
-**Regenerate the PNGs** after editing the `.puml` files (requires [Docker](https://www.docker.com/)):
-
-```bash
-docker run --rm -v "${PWD}:/work" -w /work plantuml/plantuml:latest -tpng -o diagrams docs/component-architecture.puml docs/sequence-data-ingestion.puml
-```
-
-On **Windows PowerShell**, use the same command with your repo path, for example:
-
-```powershell
-docker run --rm -v "c:/development/SkiResortConditionsDashboard:/work" -w /work plantuml/plantuml:latest -tpng -o diagrams docs/component-architecture.puml docs/sequence-data-ingestion.puml
-```
-
-Other options: [PlantUML extension](https://marketplace.visualstudio.com/items?itemName=jebbs.plantuml) in VS Code / Cursor (export PNG/SVG), or the [PlantUML online server](https://www.plantuml.com/plantuml/uml/) by pasting the file contents.
 
 **AWS resource names, networking, and CORS** are documented in [`docs/aws-architecture.md`](docs/aws-architecture.md).
 
